@@ -33,6 +33,15 @@ _PATTERNS = [
     r"PageSpeed",
     r"HeadlessChrome",
     r"Prerender",
+    # Apple Mail Privacy Protection automated fetchers
+    r"Apple-Mail-HTTPFetcher",
+    r"Apple-Mail",
+    r"AMS/\d",
+    # Yahoo Mail link-scanner
+    r"YahooMailProxy",
+    # Outlook link-preview (safe-links prefetch)
+    r"ms-outlook",
+    r"Outlook-iOS-Android",
 ]
 
 _BOT_RE = re.compile("|".join(_PATTERNS), re.IGNORECASE)

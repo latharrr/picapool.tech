@@ -89,7 +89,7 @@ def _check_track_rate(ip: str) -> bool:
 
 # ── Geo lookup (IP → country/city/region, cached) ────────────────────────────
 
-_GEO_EMPTY   = {"country": "", "city": "", "region": ""}
+_GEO_EMPTY   = {"country": "", "city": "", "region": "", "datacenter": False}
 _geo_cache: dict[str, dict] = {}
 _PRIVATE_IP_RE = re.compile(
     r"^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|localhost$|unknown$)"
@@ -104,14 +104,15 @@ async def _geo_lookup(ip: str) -> dict:
     try:
         async with httpx.AsyncClient(timeout=0.8) as client:
             r = await client.get(
-                f"http://ip-api.com/json/{ip}?fields=countryCode,city,regionName"
+                f"http://ip-api.com/json/{ip}?fields=countryCode,city,regionName,hosting,proxy"
             )
             if r.status_code == 200:
                 d = r.json()
                 geo = {
-                    "country": d.get("countryCode", ""),
-                    "city":    d.get("city", ""),
-                    "region":  d.get("regionName", ""),
+                    "country":    d.get("countryCode", ""),
+                    "city":       d.get("city", ""),
+                    "region":     d.get("regionName", ""),
+                    "datacenter": bool(d.get("hosting") or d.get("proxy")),
                 }
             else:
                 geo = _GEO_EMPTY
@@ -153,6 +154,18 @@ def _parse_device_type(ua: str) -> str:
     if re.search(r"Mobi|Android.*Mobile|iPhone|iPod", ua):      return "Mobile"
     if re.search(r"iPad|Android(?!.*Mobile)|Tablet",  ua):      return "Tablet"
     return "Desktop"
+
+
+def _detect_email_client(ua: str) -> str:
+    if not ua: return ""
+    if re.search(r"Apple-Mail|AMS/\d",                          ua):       return "Apple Mail"
+    if re.search(r"Microsoft Outlook|Outlook-iOS|Outlook-Android", ua, re.I): return "Outlook"
+    if re.search(r"\bGSA/|\bGmail/",                            ua):       return "Gmail"
+    if re.search(r"YahooMailProxy",                             ua):       return "Yahoo Mail"
+    if re.search(r"Thunderbird",                                ua):       return "Thunderbird"
+    if re.search(r"SamsungMail",                                ua):       return "Samsung Mail"
+    if re.search(r"Mimestream",                                 ua):       return "Mimestream"
+    return ""
 
 
 # ── UTM passthrough ───────────────────────────────────────────────────────────
@@ -203,10 +216,12 @@ def _record(token: str, link: dict, event_type: str,
         "country":        g["country"],
         "city":           g["city"],
         "region":         g["region"],
-        "browser":        _parse_browser(ua) if not bot else "",
-        "os":             _parse_os(ua)      if not bot else "",
-        "device_type":    _parse_device_type(ua) if not bot else "",
+        "browser":        _parse_browser(ua)      if not bot else "",
+        "os":             _parse_os(ua)           if not bot else "",
+        "device_type":    _parse_device_type(ua)  if not bot else "",
         "language":       language,
+        "is_datacenter":  str(g.get("datacenter", False)),
+        "email_client":   _detect_email_client(ua) if not bot else "",
     })
     return True
 

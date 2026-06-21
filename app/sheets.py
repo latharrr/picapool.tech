@@ -31,7 +31,8 @@ EVENTS_HDR = ["token", "recipient_id", "campaign_id", "event_type",
                "timestamp", "ip", "user_agent", "referrer",
                "is_preview_bot", "fingerprint",
                "country", "city", "region",
-               "browser", "os", "device_type", "language"]
+               "browser", "os", "device_type", "language",
+               "is_datacenter", "email_client"]
 
 # ── Module-level state ────────────────────────────────────────────────────────
 _links_ws  = None
@@ -258,18 +259,24 @@ def _is_bot(e: dict) -> bool:
     return str(e.get("is_preview_bot", "")).lower() in ("true", "1", "yes")
 
 
+def _is_datacenter(e: dict) -> bool:
+    return str(e.get("is_datacenter", "")).lower() in ("true", "1", "yes")
+
+
 def get_overview() -> dict:
     links  = _cache["links"]
     events = _cache["events"]
     threshold = time.time() - settings.ignored_threshold_hours * 3600
 
-    opens = clicks = bots = unsubscribed = 0
+    opens = clicks = bots = datacenter = unsubscribed = 0
     tokens_with_events: set[str] = set()
 
     for e in events:
         tokens_with_events.add(e.get("token", ""))
         if _is_bot(e):
             bots += 1
+        elif _is_datacenter(e):
+            datacenter += 1
         elif e.get("event_type") == "open":
             opens += 1
         elif e.get("event_type") == "click":
@@ -288,12 +295,13 @@ def get_overview() -> dict:
             ignored += 1
 
     return {
-        "total_sent":         len(links),
-        "total_opens":        opens,
-        "total_clicks":       clicks,
-        "total_bot_hits":     bots,
-        "total_ignored":      ignored,
-        "total_unsubscribed": unsubscribed,
+        "total_sent":            len(links),
+        "total_opens":           opens,
+        "total_clicks":          clicks,
+        "total_bot_hits":        bots,
+        "total_datacenter_hits": datacenter,
+        "total_ignored":         ignored,
+        "total_unsubscribed":    unsubscribed,
         "ignored_threshold_hours": settings.ignored_threshold_hours,
     }
 
@@ -337,24 +345,42 @@ def get_link_summary() -> list[dict]:
     for e in _cache["events"]:
         t = e.get("token", "")
         if t not in by_token:
-            by_token[t] = {"opens": 0, "clicks": 0}
-        if not _is_bot(e):
-            if e.get("event_type") == "open":  by_token[t]["opens"]  += 1
-            if e.get("event_type") == "click": by_token[t]["clicks"] += 1
+            by_token[t] = {"opens": 0, "clicks": 0, "first_click": ""}
+        if not _is_bot(e) and not _is_datacenter(e):
+            if e.get("event_type") == "open":
+                by_token[t]["opens"] += 1
+            if e.get("event_type") == "click":
+                by_token[t]["clicks"] += 1
+                ts_e = e.get("timestamp", "")
+                if ts_e and (not by_token[t]["first_click"] or ts_e < by_token[t]["first_click"]):
+                    by_token[t]["first_click"] = ts_e
 
     rows = []
     for lk in reversed(_cache["links"]):
         token = lk.get("token", "")
-        stats = by_token.get(token, {"opens": 0, "clicks": 0})
+        stats = by_token.get(token, {"opens": 0, "clicks": 0, "first_click": ""})
         try:
             ts = datetime.fromisoformat(lk["created_at"].replace("Z", "+00:00")).timestamp()
         except (KeyError, ValueError):
             ts = 0
+
+        fc = stats.get("first_click", "")
+        time_to_click = None
+        if fc and ts > 0:
+            try:
+                fc_ts = datetime.fromisoformat(fc.replace("Z", "+00:00")).timestamp()
+                if fc_ts >= ts:
+                    time_to_click = round((fc_ts - ts) / 3600, 1)
+            except (ValueError, KeyError):
+                pass
+
         rows.append({
             **lk,
-            "opens":   stats["opens"],
-            "clicks":  stats["clicks"],
-            "ignored": ts < threshold and token not in by_token,
+            "opens":               stats["opens"],
+            "clicks":              stats["clicks"],
+            "ignored":             ts < threshold and token not in by_token,
+            "first_click_at":      fc,
+            "time_to_click_hours": time_to_click,
         })
     return rows
 

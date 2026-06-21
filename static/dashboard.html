@@ -262,6 +262,7 @@
         <div class="stat-card"><div class="label">Clicks</div><div class="value" id="s-clicks">—</div><div class="sub" id="s-click-rate"></div></div>
         <div class="stat-card"><div class="label">Ignored</div><div class="value" id="s-ignored">—</div><div class="sub">no event in <span id="s-threshold"></span>h</div></div>
         <div class="stat-card"><div class="label">Bot hits</div><div class="value" id="s-bots">—</div></div>
+        <div class="stat-card"><div class="label">Datacenter</div><div class="value" id="s-dc">—</div><div class="sub">proxy / hosting IPs</div></div>
         <div class="stat-card"><div class="label">Unsubscribed</div><div class="value" id="s-unsub">—</div></div>
       </div>
 
@@ -394,8 +395,9 @@
             <th data-sort="token"        onclick="sortSummaryBy('token')">Token</th>
             <th data-sort="campaign_id"  onclick="sortSummaryBy('campaign_id')">Campaign</th>
             <th data-sort="recipient_id" onclick="sortSummaryBy('recipient_id')">Recipient</th>
-            <th data-sort="opens"        onclick="sortSummaryBy('opens')">Opens</th>
-            <th data-sort="clicks"       onclick="sortSummaryBy('clicks')">Clicks</th>
+            <th data-sort="opens"               onclick="sortSummaryBy('opens')">Opens</th>
+            <th data-sort="clicks"              onclick="sortSummaryBy('clicks')">Clicks</th>
+            <th data-sort="time_to_click_hours" onclick="sortSummaryBy('time_to_click_hours')">Response</th>
             <th>Status</th>
             <th>Click URL</th>
             <th data-sort="created_at"   onclick="sortSummaryBy('created_at')">Created</th>
@@ -597,6 +599,7 @@ async function loadOverview() {
   document.getElementById('s-clicks').textContent  = fmt(clicks);
   document.getElementById('s-ignored').textContent = fmt(ov.total_ignored || 0);
   document.getElementById('s-bots').textContent    = fmt(ov.total_bot_hits || 0);
+  document.getElementById('s-dc').textContent      = fmt(ov.total_datacenter_hits || 0);
   document.getElementById('s-unsub').textContent   = fmt(ov.total_unsubscribed || 0);
   document.getElementById('s-open-rate').textContent  = sent ? pct(opens  / sent) + ' open rate'  : '';
   document.getElementById('s-click-rate').textContent = sent ? pct(clicks / sent) + ' click rate' : '';
@@ -717,12 +720,13 @@ function renderEventsTable() {
     <td>${e.event_type === 'open'
       ? `<span class="badge badge-open">open</span>`
       : `<span class="badge badge-click">click</span>`}
-      ${String(e.is_preview_bot).toLowerCase() === 'true' ? `<span class="badge badge-bot">bot</span>` : ''}</td>
+      ${String(e.is_preview_bot).toLowerCase() === 'true'  ? `<span class="badge badge-bot">bot</span>` : ''}
+      ${String(e.is_datacenter).toLowerCase()  === 'true'  ? `<span class="badge" style="background:#7c3aed22;color:#a78bfa;font-size:10px;">DC</span>` : ''}</td>
     <td><code>${esc(e.token)}</code></td>
     <td>${esc(e.campaign_id  || '—')}</td>
     <td>${esc(e.recipient_id || '—')}</td>
-    <td style="white-space:nowrap;">${esc(osVal      || '—')}</td>
-    <td style="white-space:nowrap;">${esc(browserVal || '—')}</td>
+    <td style="white-space:nowrap;">${esc(osVal || '—')}</td>
+    <td style="white-space:nowrap;">${esc(e.email_client || browserVal || '—')}</td>
     <td style="white-space:nowrap;">${esc(e.country || '—')}</td>
     <td style="white-space:nowrap;">${esc(e.city    || '—')}</td>
     <td style="white-space:nowrap;">${esc((e.language || '').split('-')[0] || '—')}</td>
@@ -735,8 +739,9 @@ function renderEventsTable() {
 function exportEvents() {
   if (!_eventsData.length) { toast('No events to export', 'info'); return; }
   const fields = ['timestamp', 'event_type', 'token', 'campaign_id', 'recipient_id',
-                   'os', 'browser', 'device_type', 'country', 'city', 'region', 'language',
-                   'ip', 'user_agent', 'referrer', 'is_preview_bot'];
+                   'email_client', 'os', 'browser', 'device_type',
+                   'country', 'city', 'region', 'language',
+                   'is_datacenter', 'ip', 'user_agent', 'referrer', 'is_preview_bot'];
   exportCSV(_eventsData, fields, 'events.csv');
   toast('Events exported');
 }
@@ -787,7 +792,7 @@ function renderSummary() {
 
   document.getElementById('summary-count').textContent = data.length + ' links';
   const body = document.getElementById('summary-body');
-  if (!data.length) { body.innerHTML = '<tr><td colspan="9" class="empty">Nothing found</td></tr>'; return; }
+  if (!data.length) { body.innerHTML = '<tr><td colspan="10" class="empty">Nothing found</td></tr>'; return; }
 
   body.innerHTML = data.map(r => {
     const activeVal = String(r.is_active).toLowerCase();
@@ -808,6 +813,7 @@ function renderSummary() {
       <td>${esc(r.recipient_id || '—')}</td>
       <td>${fmt(r.opens)}</td>
       <td>${fmt(r.clicks)}</td>
+      <td style="white-space:nowrap;color:var(--muted);">${fmtResponseTime(r.time_to_click_hours)}</td>
       <td>${badge}</td>
       <td>
         <a href="${esc(clickUrl)}" target="_blank" style="color:var(--accent2);font-size:11px;">${esc(trunc(clickUrl, 36))}</a>
@@ -831,7 +837,7 @@ function renderSummary() {
 
 function exportLinks() {
   if (!_summaryData.length) { toast('No links to export', 'info'); return; }
-  const fields = ['token', 'campaign_id', 'recipient_id', 'dest_url', 'created_at', 'is_active', 'expires_at', 'opens', 'clicks'];
+  const fields = ['token', 'campaign_id', 'recipient_id', 'dest_url', 'created_at', 'is_active', 'expires_at', 'opens', 'clicks', 'time_to_click_hours', 'first_click_at'];
   exportCSV(_summaryData, fields, 'links.csv');
   toast('Links exported');
 }
@@ -1133,6 +1139,14 @@ document.addEventListener('keydown', e => {
 const fmt   = n => Number(n).toLocaleString();
 const pct   = r => (r * 100).toFixed(1) + '%';
 const trunc = (s, n) => s && s.length > n ? s.slice(0, n) + '…' : (s || '');
+
+function fmtResponseTime(h) {
+  if (h === null || h === undefined || h === '') return '—';
+  const n = Number(h);
+  if (n < 1)  return '< 1h';
+  if (n < 24) return n.toFixed(1) + 'h';
+  return (n / 24).toFixed(1) + 'd';
+}
 
 const fmtTime = iso => {
   if (!iso) return '—';
