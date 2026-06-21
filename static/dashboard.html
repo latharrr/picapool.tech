@@ -529,7 +529,7 @@ async function loadEvents() {
     <td>${e.event_type === 'open'
       ? `<span class="badge badge-open">open</span>`
       : `<span class="badge badge-click">click</span>`}
-      ${e.is_preview_bot ? `<span class="badge badge-bot">bot</span>` : ''}</td>
+      ${String(e.is_preview_bot).toLowerCase() === 'true' ? `<span class="badge badge-bot">bot</span>` : ''}</td>
     <td><code>${esc(e.token)}</code></td>
     <td>${esc(e.campaign_id || '—')}</td>
     <td>${esc(e.recipient_id || '—')}</td>
