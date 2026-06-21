@@ -106,8 +106,9 @@ def _ws_to_dicts(ws, headers: list[str]) -> list[dict]:
     rows = ws.get_all_values()
     if not rows:
         return []
-    # Tolerate sheet header row
-    start = 1 if rows[0] == headers else 0
+    # Tolerate header row even when sheet has fewer columns than current headers
+    # (e.g. after adding a new column like "country")
+    start = 1 if rows[0] == headers[:len(rows[0])] else 0
     return [dict(zip(headers, r)) for r in rows[start:] if any(r)]
 
 
