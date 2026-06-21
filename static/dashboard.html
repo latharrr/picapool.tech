@@ -321,12 +321,15 @@
             <th data-sort="token" onclick="sortEventsBy('token')">Token</th>
             <th data-sort="campaign_id" onclick="sortEventsBy('campaign_id')">Campaign</th>
             <th data-sort="recipient_id" onclick="sortEventsBy('recipient_id')">Recipient</th>
-            <th>Device</th>
+            <th data-sort="os" onclick="sortEventsBy('os')">OS</th>
+            <th data-sort="browser" onclick="sortEventsBy('browser')">Browser</th>
             <th data-sort="country" onclick="sortEventsBy('country')">Country</th>
+            <th data-sort="city" onclick="sortEventsBy('city')">City</th>
+            <th data-sort="language" onclick="sortEventsBy('language')">Lang</th>
             <th data-sort="ip" onclick="sortEventsBy('ip')">IP</th>
             <th>Referrer</th>
           </tr></thead>
-          <tbody id="events-body"><tr><td colspan="9" class="empty">Loading…</td></tr></tbody>
+          <tbody id="events-body"><tr><td colspan="12" class="empty">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -703,9 +706,13 @@ function renderEventsTable() {
 
   document.getElementById('event-count').textContent = data.length + ' rows';
   const body = document.getElementById('events-body');
-  if (!data.length) { body.innerHTML = '<tr><td colspan="9" class="empty">No events match your filters</td></tr>'; return; }
+  if (!data.length) { body.innerHTML = '<tr><td colspan="12" class="empty">No events match your filters</td></tr>'; return; }
 
-  body.innerHTML = data.map(e => `<tr>
+  body.innerHTML = data.map(e => {
+    // Fall back to client-side UA parse for old events that predate server-side parsing
+    const osVal      = e.os      || parseOS(e.user_agent);
+    const browserVal = e.browser || parseBrowser(e.user_agent);
+    return `<tr>
     <td style="white-space:nowrap;">${fmtTime(e.timestamp)}</td>
     <td>${e.event_type === 'open'
       ? `<span class="badge badge-open">open</span>`
@@ -714,16 +721,22 @@ function renderEventsTable() {
     <td><code>${esc(e.token)}</code></td>
     <td>${esc(e.campaign_id  || '—')}</td>
     <td>${esc(e.recipient_id || '—')}</td>
-    <td style="white-space:nowrap;">${esc(parseDevice(e.user_agent))}</td>
+    <td style="white-space:nowrap;">${esc(osVal      || '—')}</td>
+    <td style="white-space:nowrap;">${esc(browserVal || '—')}</td>
     <td style="white-space:nowrap;">${esc(e.country || '—')}</td>
+    <td style="white-space:nowrap;">${esc(e.city    || '—')}</td>
+    <td style="white-space:nowrap;">${esc((e.language || '').split('-')[0] || '—')}</td>
     <td>${esc(e.ip || '—')}</td>
     <td title="${esc(e.referrer || '')}">${esc(trunc(e.referrer, 36))}</td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 
 function exportEvents() {
   if (!_eventsData.length) { toast('No events to export', 'info'); return; }
-  const fields = ['timestamp', 'event_type', 'token', 'campaign_id', 'recipient_id', 'country', 'ip', 'user_agent', 'referrer', 'is_preview_bot'];
+  const fields = ['timestamp', 'event_type', 'token', 'campaign_id', 'recipient_id',
+                   'os', 'browser', 'device_type', 'country', 'city', 'region', 'language',
+                   'ip', 'user_agent', 'referrer', 'is_preview_bot'];
   exportCSV(_eventsData, fields, 'events.csv');
   toast('Events exported');
 }
@@ -1140,16 +1153,28 @@ function copyText(t) {
   navigator.clipboard.writeText(t).then(() => toast('Copied!')).catch(() => toast('Copy failed', 'error'));
 }
 
-function parseDevice(ua) {
-  if (!ua) return '—';
-  if (/iPhone/.test(ua))           return 'iPhone';
-  if (/iPad/.test(ua))             return 'iPad';
-  if (/Android.*Mobile/.test(ua))  return 'Android';
-  if (/Android/.test(ua))          return 'Android Tablet';
-  if (/Windows/.test(ua))          return 'Windows';
-  if (/Macintosh|Mac OS/.test(ua)) return 'Mac';
-  if (/Linux/.test(ua))            return 'Linux';
-  return 'Desktop';
+function parseOS(ua) {
+  if (!ua) return '';
+  if (/iPhone|iPod/.test(ua))          return 'iOS';
+  if (/iPad/.test(ua))                 return 'iPadOS';
+  if (/Android/.test(ua))              return 'Android';
+  if (/Windows NT/.test(ua))           return 'Windows';
+  if (/CrOS/.test(ua))                 return 'ChromeOS';
+  if (/Macintosh|Mac OS X/.test(ua))   return 'macOS';
+  if (/Linux/.test(ua))                return 'Linux';
+  return 'Other';
+}
+function parseBrowser(ua) {
+  if (!ua) return '';
+  if (/Edg\//.test(ua))               return 'Edge';
+  if (/OPR|Opera/.test(ua))           return 'Opera';
+  if (/YaBrowser/.test(ua))           return 'Yandex';
+  if (/SamsungBrowser/.test(ua))      return 'Samsung';
+  if (/Chrome\//.test(ua))            return 'Chrome';
+  if (/Firefox\//.test(ua))           return 'Firefox';
+  if (/Safari\//.test(ua) && !/Chrome/.test(ua)) return 'Safari';
+  if (/MSIE|Trident/.test(ua))        return 'IE';
+  return 'Other';
 }
 
 function exportCSV(data, fields, filename) {

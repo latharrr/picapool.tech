@@ -87,27 +87,72 @@ def _check_track_rate(ip: str) -> bool:
     return True
 
 
-# ── Geo lookup (IP → country code, cached) ───────────────────────────────────
+# ── Geo lookup (IP → country/city/region, cached) ────────────────────────────
 
-_geo_cache: dict[str, str] = {}
+_GEO_EMPTY   = {"country": "", "city": "", "region": ""}
+_geo_cache: dict[str, dict] = {}
 _PRIVATE_IP_RE = re.compile(
     r"^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|localhost$|unknown$)"
 )
 
 
-async def _geo_lookup(ip: str) -> str:
+async def _geo_lookup(ip: str) -> dict:
     if not ip or _PRIVATE_IP_RE.match(ip):
-        return ""
+        return _GEO_EMPTY
     if ip in _geo_cache:
         return _geo_cache[ip]
     try:
         async with httpx.AsyncClient(timeout=0.8) as client:
-            r = await client.get(f"http://ip-api.com/json/{ip}?fields=countryCode")
-            country = r.json().get("countryCode", "") if r.status_code == 200 else ""
+            r = await client.get(
+                f"http://ip-api.com/json/{ip}?fields=countryCode,city,regionName"
+            )
+            if r.status_code == 200:
+                d = r.json()
+                geo = {
+                    "country": d.get("countryCode", ""),
+                    "city":    d.get("city", ""),
+                    "region":  d.get("regionName", ""),
+                }
+            else:
+                geo = _GEO_EMPTY
     except Exception:
-        country = ""
-    _geo_cache[ip] = country
-    return country
+        geo = _GEO_EMPTY
+    _geo_cache[ip] = geo
+    return geo
+
+
+# ── User-agent parsing ────────────────────────────────────────────────────────
+
+def _parse_browser(ua: str) -> str:
+    if not ua:                               return ""
+    if re.search(r"Edg/",         ua):       return "Edge"
+    if re.search(r"OPR|Opera",    ua):       return "Opera"
+    if re.search(r"YaBrowser",    ua):       return "Yandex"
+    if re.search(r"SamsungBrowser", ua):     return "Samsung"
+    if re.search(r"Chrome/",      ua):       return "Chrome"
+    if re.search(r"Firefox/",     ua):       return "Firefox"
+    if re.search(r"Safari/",      ua) and "Chrome" not in ua: return "Safari"
+    if re.search(r"MSIE|Trident", ua):       return "IE"
+    return "Other"
+
+
+def _parse_os(ua: str) -> str:
+    if not ua:                                    return ""
+    if re.search(r"iPhone|iPod",  ua):            return "iOS"
+    if re.search(r"iPad",         ua):            return "iPadOS"
+    if re.search(r"Android",      ua):            return "Android"
+    if re.search(r"Windows NT",   ua):            return "Windows"
+    if re.search(r"CrOS",         ua):            return "ChromeOS"
+    if re.search(r"Macintosh|Mac OS X", ua):      return "macOS"
+    if re.search(r"Linux",        ua):            return "Linux"
+    return "Other"
+
+
+def _parse_device_type(ua: str) -> str:
+    if not ua:                                                   return ""
+    if re.search(r"Mobi|Android.*Mobile|iPhone|iPod", ua):      return "Mobile"
+    if re.search(r"iPad|Android(?!.*Mobile)|Tablet",  ua):      return "Tablet"
+    return "Desktop"
 
 
 # ── UTM passthrough ───────────────────────────────────────────────────────────
@@ -137,11 +182,13 @@ async def _fire_webhook(payload: dict) -> None:
 # ── Event recording ───────────────────────────────────────────────────────────
 
 def _record(token: str, link: dict, event_type: str,
-            ip: str, ua: str, referrer: str, bot: bool, country: str = "") -> bool:
+            ip: str, ua: str, referrer: str, bot: bool,
+            geo: dict | None = None, language: str = "") -> bool:
     """Log event; returns False if duplicate (fingerprint collision)."""
     fp = _fingerprint(token, ip, ua, event_type)
     if sheets.is_duplicate(fp):
         return False
+    g = geo or _GEO_EMPTY
     sheets.enqueue_event({
         "token":          token,
         "recipient_id":   link.get("recipient_id", ""),
@@ -153,7 +200,13 @@ def _record(token: str, link: dict, event_type: str,
         "referrer":       referrer,
         "is_preview_bot": str(bot),
         "fingerprint":    fp,
-        "country":        country,
+        "country":        g["country"],
+        "city":           g["city"],
+        "region":         g["region"],
+        "browser":        _parse_browser(ua) if not bot else "",
+        "os":             _parse_os(ua)      if not bot else "",
+        "device_type":    _parse_device_type(ua) if not bot else "",
+        "language":       language,
     })
     return True
 
@@ -172,10 +225,11 @@ async def track_click(token: str, request: Request):
 
     ua       = request.headers.get("user-agent", "")
     referrer = request.headers.get("referer", "")
+    language = request.headers.get("accept-language", "").split(",")[0].strip()
     bot      = is_preview_bot(ua)
-    country  = await _geo_lookup(ip) if not bot else ""
+    geo      = await _geo_lookup(ip) if not bot else _GEO_EMPTY
 
-    recorded = _record(token, link, "click", ip, ua, referrer, bot, country)
+    recorded = _record(token, link, "click", ip, ua, referrer, bot, geo, language)
 
     if not bot and recorded:
         asyncio.create_task(_fire_webhook({
@@ -185,7 +239,8 @@ async def track_click(token: str, request: Request):
             "event_type":   "click",
             "timestamp":    datetime.now(timezone.utc).isoformat(),
             "ip":           ip,
-            "country":      country,
+            "country":      geo["country"],
+            "city":         geo["city"],
         }))
 
     dest = _append_utm(link["dest_url"], request.query_params)
@@ -202,8 +257,9 @@ async def track_open(token_file: str, request: Request):
         if _check_track_rate(ip):   # silently skip record if rate-limited; still return pixel
             ua       = request.headers.get("user-agent", "")
             referrer = request.headers.get("referer", "")
+            language = request.headers.get("accept-language", "").split(",")[0].strip()
             bot      = is_preview_bot(ua)
-            country  = await _geo_lookup(ip) if not bot else ""
-            _record(token, link, "open", ip, ua, referrer, bot, country)
+            geo      = await _geo_lookup(ip) if not bot else _GEO_EMPTY
+            _record(token, link, "open", ip, ua, referrer, bot, geo, language)
 
     return Response(content=_PIXEL, media_type="image/png", headers=_PIXEL_HEADERS)

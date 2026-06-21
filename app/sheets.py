@@ -29,7 +29,9 @@ LINKS_HDR  = ["token", "dest_url", "campaign_id", "recipient_id",
                "created_at", "is_active", "expires_at"]
 EVENTS_HDR = ["token", "recipient_id", "campaign_id", "event_type",
                "timestamp", "ip", "user_agent", "referrer",
-               "is_preview_bot", "fingerprint", "country"]
+               "is_preview_bot", "fingerprint",
+               "country", "city", "region",
+               "browser", "os", "device_type", "language"]
 
 # ── Module-level state ────────────────────────────────────────────────────────
 _links_ws  = None
