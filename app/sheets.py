@@ -58,24 +58,32 @@ def _make_creds():
 
 def _connect():
     global _links_ws, _events_ws
-    try:
-        import gspread
-        client = gspread.authorize(_make_creds())
-        ss = client.open_by_key(settings.google_sheet_id)
+    import gspread
+    delays = [2, 4, 8, 16]
+    last_exc: Exception = Exception("never attempted")
+    for attempt, delay in enumerate([0] + delays, 1):
+        if delay:
+            time.sleep(delay)
+        try:
+            client = gspread.authorize(_make_creds())
+            ss = client.open_by_key(settings.google_sheet_id)
 
-        def _ws(name, headers):
-            try:
-                return ss.worksheet(name)
-            except gspread.WorksheetNotFound:
-                ws = ss.add_worksheet(name, rows=50000, cols=len(headers))
-                ws.append_row(headers)
-                return ws
+            def _ws(name, headers):
+                try:
+                    return ss.worksheet(name)
+                except gspread.WorksheetNotFound:
+                    ws = ss.add_worksheet(name, rows=50000, cols=len(headers))
+                    ws.append_row(headers)
+                    return ws
 
-        _links_ws  = _ws("links",  LINKS_HDR)
-        _events_ws = _ws("events", EVENTS_HDR)
-        logger.info("Sheets connected: %s", settings.google_sheet_id)
-    except Exception as exc:
-        logger.error("Sheets connect failed: %s", exc)
+            _links_ws  = _ws("links",  LINKS_HDR)
+            _events_ws = _ws("events", EVENTS_HDR)
+            logger.info("Sheets connected: %s", settings.google_sheet_id)
+            return
+        except Exception as exc:
+            last_exc = exc
+            logger.warning("Sheets connect attempt %d/%d failed: %s", attempt, len(delays) + 1, exc)
+    logger.error("Sheets permanently unavailable after %d attempts: %s", len(delays) + 1, last_exc)
 
 
 # ── Dedup (in-memory, per-process) ───────────────────────────────────────────
@@ -134,10 +142,11 @@ def all_events() -> list[dict]:
 # ── Writes ─────────────────────────────────────────────────────────────────────
 
 async def append_link(link: dict) -> None:
+    if _links_ws is None:
+        raise RuntimeError("Google Sheets is not connected; link cannot be persisted")
     row = [str(link.get(h, "")) for h in LINKS_HDR]
     loop = asyncio.get_running_loop()
-    if _links_ws:
-        await loop.run_in_executor(None, _links_ws.append_row, row)
+    await loop.run_in_executor(None, _links_ws.append_row, row)
     _cache["links"].append(link)  # optimistic local update
 
 
@@ -224,8 +233,12 @@ def get_events_filtered(
         if date_from or date_to:
             try:
                 ts = datetime.fromisoformat(e["timestamp"].replace("Z", "+00:00"))
-                if date_from and ts < date_from: continue
-                if date_to   and ts > date_to:   continue
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                df = date_from.replace(tzinfo=timezone.utc) if date_from and date_from.tzinfo is None else date_from
+                dt = date_to.replace(tzinfo=timezone.utc)   if date_to   and date_to.tzinfo   is None else date_to
+                if df and ts < df: continue
+                if dt and ts > dt: continue
             except (KeyError, ValueError):
                 pass
         result.append(e)

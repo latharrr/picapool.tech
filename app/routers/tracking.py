@@ -40,7 +40,10 @@ def _link_is_live(link: dict) -> bool:
     exp = link.get("expires_at", "")
     if exp:
         try:
-            if datetime.fromisoformat(exp.replace("Z", "+00:00")) < datetime.now(timezone.utc):
+            dt = datetime.fromisoformat(exp.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            if dt < datetime.now(timezone.utc):
                 return False
         except ValueError:
             pass
