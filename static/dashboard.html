@@ -166,6 +166,18 @@
   .copy-btn:hover { text-decoration: underline; }
   .progress { background: var(--border); border-radius: 4px; height: 6px; width: 100%; min-width: 60px; }
   .progress-bar { height: 6px; border-radius: 4px; background: var(--accent); }
+
+  /* ── AI chat ── */
+  .ai-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .ai-panel h3 { font-size: 14px; margin-bottom: 4px; }
+  .ai-panel p  { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+  .ai-input-row { display: flex; gap: 10px; }
+  .ai-input-row input { flex: 1; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 13px; outline: none; }
+  .ai-input-row input:focus { border-color: var(--accent); }
+  #ai-response { margin-top: 16px; display: none; }
+  #ai-response .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  #ai-response .answer { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+  #ai-spinner { display: none; color: var(--muted); font-size: 12px; margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -200,6 +212,7 @@
       <button class="tab" data-tab="events">Events</button>
       <button class="tab" data-tab="summary">Links</button>
       <button class="tab" data-tab="create">Create Link</button>
+      <button class="tab" data-tab="ai" style="color:var(--accent2);">⚡ AI Analysis</button>
     </div>
 
     <!-- ── OVERVIEW ── -->
@@ -288,6 +301,35 @@
           </tr></thead>
           <tbody id="summary-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ── AI ANALYSIS ── -->
+    <div id="tab-ai" class="tab-panel">
+      <div class="ai-panel">
+        <h3>AI Analysis — powered by Groq</h3>
+        <p>Ask anything about your campaigns. The AI sees your live aggregated stats.</p>
+        <div class="ai-input-row">
+          <input id="ai-question" placeholder="e.g. Which campaign has the best click rate? Why might opens be low?" />
+          <button class="btn btn-primary" onclick="askAI()">Ask</button>
+        </div>
+        <div id="ai-spinner">Thinking…</div>
+        <div id="ai-response">
+          <div class="label">Answer</div>
+          <div class="answer" id="ai-answer"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;" class="ai-panel">
+        <h3 style="margin-bottom:12px;">Quick questions</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button class="btn btn-sm btn-outline" onclick="quick('What is my overall open rate and click rate?')">Open &amp; click rates</button>
+          <button class="btn btn-sm btn-outline" onclick="quick('Which campaign has the highest click rate?')">Best campaign</button>
+          <button class="btn btn-sm btn-outline" onclick="quick('How many links are being ignored and what could that indicate?')">Ignored links</button>
+          <button class="btn btn-sm btn-outline" onclick="quick('Are there any bot hits distorting the data? How significant?')">Bot impact</button>
+          <button class="btn btn-sm btn-outline" onclick="quick('Summarise the overall health of my outreach in 3 bullet points.')">Health summary</button>
+          <button class="btn btn-sm btn-outline" onclick="quick('What actions should I take to improve engagement?')">Recommendations</button>
+        </div>
       </div>
     </div>
 
@@ -623,6 +665,38 @@ function esc(s) {
 function csvCell(s) { return `"${String(s ?? '').replace(/"/g, '""')}"`; }
 function copyText(t) { navigator.clipboard.writeText(t).catch(() => {}); }
 function id(s) { return document.getElementById(s); }
+
+// ════════════════════════════════════════════ AI Analysis
+async function askAI() {
+  const q = document.getElementById('ai-question').value.trim();
+  if (!q) return;
+  document.getElementById('ai-spinner').style.display = 'block';
+  document.getElementById('ai-response').style.display = 'none';
+  try {
+    const r = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q }),
+    });
+    const data = await r.json();
+    document.getElementById('ai-answer').textContent = data.answer || data.detail || 'No response.';
+    document.getElementById('ai-response').style.display = 'block';
+  } catch (e) {
+    document.getElementById('ai-answer').textContent = 'Request failed: ' + e.message;
+    document.getElementById('ai-response').style.display = 'block';
+  } finally {
+    document.getElementById('ai-spinner').style.display = 'none';
+  }
+}
+
+function quick(q) {
+  document.getElementById('ai-question').value = q;
+  askAI();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement.id === 'ai-question') askAI();
+});
 
 // ════════════════════════════════════════════ Boot
 checkAuth();
