@@ -16,18 +16,7 @@ Or go to [railway.app](https://railway.app) → **New Project** → **Deploy fro
 
 ---
 
-## 2 — Add the Postgres plugin
-
-In the Railway dashboard for your project:
-
-1. Click **+ New** → **Database** → **PostgreSQL**
-2. Railway provisions the DB and injects `DATABASE_URL` into your service automatically.
-   The URL will be `postgres://...` — the app normalises it to `postgresql+asyncpg://` at startup.
-3. Tables are created automatically on first boot (SQLAlchemy `create_all`).
-
----
-
-## 3 — Set environment variables
+## 2 — Set environment variables
 
 In the Railway dashboard → your service → **Variables**, add:
 
@@ -39,8 +28,6 @@ In the Railway dashboard → your service → **Variables**, add:
 | `GOOGLE_SHEET_ID` | Sheet ID from the Google Sheets URL | No |
 | `SHEETS_BATCH_INTERVAL` | Seconds between Sheets flushes (default `10`) | No |
 | `IGNORED_THRESHOLD_HOURS` | Hours before no-event link = ignored (default `48`) | No |
-
-> `DATABASE_URL` is injected automatically by the Postgres plugin — do **not** set it manually.
 
 Generate `SECRET_KEY`:
 ```bash
@@ -61,7 +48,7 @@ Paste the result as the value of `GOOGLE_CREDENTIALS_JSON`.
 
 ---
 
-## 4 — Custom domain (picapool.tech)
+## 3 — Custom domain (picapool.tech)
 
 In Railway dashboard → your service → **Settings** → **Networking** → **Custom Domain**:
 
@@ -81,7 +68,7 @@ Railway issues a TLS certificate automatically once DNS propagates (~1–5 min w
 
 ---
 
-## 5 — Verify the deployment
+## 4 — Verify the deployment
 
 ```bash
 # Health check
@@ -102,7 +89,7 @@ curl -I https://picapool.tech/p/<token>.png  # → 200 image/png
 
 ---
 
-## 6 — Using tracking links in emails
+## 5 — Using tracking links in emails
 
 **Click tracking** — wrap every link:
 ```
@@ -146,7 +133,6 @@ Computed at query time, no background job:
 |---|---|---|
 | `DASHBOARD_PASSWORD` | *(required)* | `/dashboard` login password |
 | `SECRET_KEY` | *(required)* | Signs session cookies |
-| `DATABASE_URL` | *(injected by Railway)* | Postgres connection string |
 | `GOOGLE_CREDENTIALS_JSON` | `""` | Raw service-account JSON (Railway) |
 | `GOOGLE_SHEETS_CREDENTIALS_PATH` | `service_account.json` | Key file path (local dev) |
 | `GOOGLE_SHEET_ID` | `""` | Target spreadsheet ID |

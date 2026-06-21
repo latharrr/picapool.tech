@@ -1,6 +1,8 @@
 import hashlib
 import hmac
-from datetime import datetime
+import time
+from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -17,13 +19,26 @@ router = APIRouter()
 _STATIC = Path(__file__).parent.parent.parent / "static"
 _SESSION_COOKIE = "tracker_session"
 
+_login_attempts: dict[str, list[float]] = defaultdict(list)
+_LOGIN_WINDOW = 300   # 5-minute window
+_LOGIN_MAX    = 10    # attempts before lockout
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("X-Forwarded-For")
+    return fwd.split(",")[0].strip() if fwd else (
+        request.client.host if request.client else "unknown"
+    )
+
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 def _session_value() -> str:
+    # Include ISO week so stolen cookies expire within the same window as max_age
+    week = datetime.now(timezone.utc).strftime("%G%V")
     return hmac.new(
         settings.secret_key.encode(),
-        settings.dashboard_password.encode(),
+        f"{settings.dashboard_password}:{week}".encode(),
         hashlib.sha256,
     ).hexdigest()
 
@@ -48,6 +63,14 @@ async def dashboard_page():
 
 @router.post("/dashboard/login")
 async def dashboard_login(request: Request):
+    ip = _client_ip(request)
+    now = time.time()
+    recent = [t for t in _login_attempts[ip] if now - t < _LOGIN_WINDOW]
+    _login_attempts[ip] = recent
+    if len(recent) >= _LOGIN_MAX:
+        raise HTTPException(status_code=429, detail="Too many login attempts")
+    _login_attempts[ip].append(now)
+
     form = await request.form()
     if not hmac.compare_digest(str(form.get("password", "")), settings.dashboard_password):
         raise HTTPException(status_code=401, detail="Invalid password")
@@ -148,7 +171,10 @@ class CreateLinkRequest(BaseModel):
 async def api_create_link(request: Request, body: CreateLinkRequest):
     require_auth(request)
     token = body.token or generate_token()
-    now   = datetime.utcnow().isoformat() + "Z"
+    now   = datetime.now(timezone.utc).isoformat()
+    exp   = body.expires_at
+    if exp is not None and exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
     link  = {
         "token":        token,
         "dest_url":     body.dest_url,
@@ -156,7 +182,7 @@ async def api_create_link(request: Request, body: CreateLinkRequest):
         "recipient_id": body.recipient_id or "",
         "created_at":   now,
         "is_active":    str(body.is_active),
-        "expires_at":   body.expires_at.isoformat() if body.expires_at else "",
+        "expires_at":   exp.isoformat() if exp else "",
     }
     await sheets.append_link(link)
     base = settings.base_url.rstrip("/") if settings.base_url else str(request.base_url).rstrip("/")
