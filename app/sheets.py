@@ -29,7 +29,7 @@ LINKS_HDR  = ["token", "dest_url", "campaign_id", "recipient_id",
                "created_at", "is_active", "expires_at"]
 EVENTS_HDR = ["token", "recipient_id", "campaign_id", "event_type",
                "timestamp", "ip", "user_agent", "referrer",
-               "is_preview_bot", "fingerprint"]
+               "is_preview_bot", "fingerprint", "country"]
 
 # ── Module-level state ────────────────────────────────────────────────────────
 _links_ws  = None
@@ -37,6 +37,7 @@ _events_ws = None
 
 _cache: dict = {"links": [], "events": []}
 _write_queue: list[list] = []
+_WRITE_QUEUE_MAX = 10_000
 
 # In-process dedup: fingerprint → timestamp seen
 _dedup: dict[str, float] = {}
@@ -152,8 +153,11 @@ async def append_link(link: dict) -> None:
 
 def enqueue_event(event: dict) -> None:
     """Non-blocking — flushed in the background."""
+    if len(_write_queue) >= _WRITE_QUEUE_MAX:
+        logger.warning("Write queue full (%d entries), dropping event", _WRITE_QUEUE_MAX)
+        return
     _write_queue.append([str(event.get(h, "")) for h in EVENTS_HDR])
-    # Optimistic local update so dashboard reflects new events quickly
+    # Optimistic local update so dashboard reflects new events immediately
     _cache["events"].append(event)
 
 
@@ -256,7 +260,7 @@ def get_overview() -> dict:
     events = _cache["events"]
     threshold = time.time() - settings.ignored_threshold_hours * 3600
 
-    opens = clicks = bots = 0
+    opens = clicks = bots = unsubscribed = 0
     tokens_with_events: set[str] = set()
 
     for e in events:
@@ -270,6 +274,8 @@ def get_overview() -> dict:
 
     ignored = 0
     for lk in links:
+        if str(lk.get("is_active", "true")).lower() == "unsubscribed":
+            unsubscribed += 1
         try:
             ts = datetime.fromisoformat(
                 lk["created_at"].replace("Z", "+00:00")).timestamp()
@@ -279,11 +285,12 @@ def get_overview() -> dict:
             ignored += 1
 
     return {
-        "total_sent": len(links),
-        "total_opens": opens,
-        "total_clicks": clicks,
-        "total_bot_hits": bots,
-        "total_ignored": ignored,
+        "total_sent":         len(links),
+        "total_opens":        opens,
+        "total_clicks":       clicks,
+        "total_bot_hits":     bots,
+        "total_ignored":      ignored,
+        "total_unsubscribed": unsubscribed,
         "ignored_threshold_hours": settings.ignored_threshold_hours,
     }
 
@@ -385,6 +392,25 @@ def get_top_campaigns(limit: int = 10) -> list[dict]:
     return result[:limit]
 
 
+def get_referrer_summary(limit: int = 20) -> list[dict]:
+    from urllib.parse import urlparse
+    counts: dict[str, int] = {}
+    for e in _cache["events"]:
+        if _is_bot(e):
+            continue
+        ref = (e.get("referrer") or "").strip()
+        if not ref:
+            key = "(direct)"
+        else:
+            try:
+                key = urlparse(ref).netloc or ref
+            except Exception:
+                key = ref
+        counts[key] = counts.get(key, 0) + 1
+    result = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+    return [{"referrer": k, "count": v} for k, v in result[:limit]]
+
+
 def build_analysis_context() -> str:
     ov = get_overview()
     sent, opens, clicks = ov["total_sent"], ov["total_opens"], ov["total_clicks"]
@@ -397,6 +423,7 @@ def build_analysis_context() -> str:
         f"Clicks: {clicks} ({click_rate})",
         f"Bot hits filtered out: {ov['total_bot_hits']}",
         f"Ignored (no activity >{settings.ignored_threshold_hours}h): {ov['total_ignored']}",
+        f"Unsubscribed: {ov['total_unsubscribed']}",
         "", "Top campaigns:",
     ]
     for c in get_top_campaigns(10):
@@ -423,16 +450,22 @@ async def startup():
     async def _refresh_loop():
         while True:
             await asyncio.sleep(settings.cache_ttl_seconds)
-            # Flush first so reload sees the latest events in Sheets
-            await _flush()
-            loop2 = asyncio.get_running_loop()
-            await loop2.run_in_executor(None, _reload_links)
-            await loop2.run_in_executor(None, _reload_events)
+            try:
+                # Flush first so reload sees the latest events in Sheets
+                await _flush()
+                loop2 = asyncio.get_running_loop()
+                await loop2.run_in_executor(None, _reload_links)
+                await loop2.run_in_executor(None, _reload_events)
+            except Exception as exc:
+                logger.error("Refresh loop error (will retry next cycle): %s", exc)
 
     async def _flush_loop():
         while True:
             await asyncio.sleep(settings.sheets_batch_interval)
-            await _flush()
+            try:
+                await _flush()
+            except Exception as exc:
+                logger.error("Flush loop error (will retry next cycle): %s", exc)
 
     asyncio.create_task(_refresh_loop())
     asyncio.create_task(_flush_loop())

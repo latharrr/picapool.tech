@@ -28,6 +28,7 @@ In the Railway dashboard → your service → **Variables**, add:
 | `GOOGLE_SHEET_ID` | Sheet ID from the Google Sheets URL | No |
 | `SHEETS_BATCH_INTERVAL` | Seconds between Sheets flushes (default `10`) | No |
 | `IGNORED_THRESHOLD_HOURS` | Hours before no-event link = ignored (default `48`) | No |
+| `WEBHOOK_URL` | POST here on every genuine click (Slack/Zapier webhook URL) | No |
 
 Generate `SECRET_KEY`:
 ```bash
@@ -138,3 +139,4 @@ Computed at query time, no background job:
 | `GOOGLE_SHEET_ID` | `""` | Target spreadsheet ID |
 | `SHEETS_BATCH_INTERVAL` | `10` | Seconds between Sheets flushes |
 | `IGNORED_THRESHOLD_HOURS` | `48` | Hours until no-event link = ignored |
+| `WEBHOOK_URL` | `""` | POST here on every genuine click (Slack/Zapier/custom) |

@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Optional AI
     groq_api_key: str = ""
 
+    # Optional webhook — POST here on every genuine (non-bot) click
+    webhook_url: str = ""
+
     class Config:
         env_file = ".env"
 

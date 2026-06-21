@@ -71,6 +71,13 @@ async def dashboard_login(request: Request):
         raise HTTPException(status_code=429, detail="Too many login attempts")
     _login_attempts[ip].append(now)
 
+    # Prune stale IP entries to prevent unbounded growth
+    if len(_login_attempts) > 500:
+        stale = [k for k, v in _login_attempts.items()
+                 if not any(t for t in v if now - t < _LOGIN_WINDOW)]
+        for k in stale:
+            del _login_attempts[k]
+
     form = await request.form()
     if not hmac.compare_digest(str(form.get("password", "")), settings.dashboard_password):
         raise HTTPException(status_code=401, detail="Invalid password")
@@ -138,6 +145,12 @@ async def api_timeseries(request: Request, hours: int = 48):
 async def api_campaigns(request: Request):
     require_auth(request)
     return sheets.get_top_campaigns()
+
+
+@router.get("/api/referrers")
+async def api_referrers(request: Request):
+    require_auth(request)
+    return sheets.get_referrer_summary()
 
 
 # ── Groq AI analysis ──────────────────────────────────────────────────────────
@@ -236,6 +249,15 @@ async def api_update_link(token: str, request: Request, body: UpdateLinkRequest)
 async def api_delete_link(token: str, request: Request):
     require_auth(request)
     found = await sheets.delete_link(token)
+    if not found:
+        raise HTTPException(status_code=404, detail="Link not found")
+    return {"ok": True}
+
+
+@router.post("/api/links/{token}/unsubscribe")
+async def api_unsubscribe_link(token: str, request: Request):
+    require_auth(request)
+    found = await sheets.update_link(token, {"is_active": "unsubscribed"})
     if not found:
         raise HTTPException(status_code=404, detail="Link not found")
     return {"ok": True}
