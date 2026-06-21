@@ -1,0 +1,16 @@
+# Local development only — Postgres is NOT bundled here.
+# Provide DATABASE_URL in your .env file pointing at a local or remote Postgres instance.
+# On Railway, the Postgres plugin injects DATABASE_URL automatically.
+
+version: "3.9"
+
+services:
+  tracker:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    # Mount service-account key only if using file-based Google credentials locally
+    # volumes:
+    #   - ./service_account.json:/app/service_account.json:ro

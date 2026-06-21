@@ -1,0 +1,11 @@
+.env
+service_account.json
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.DS_Store
+*.log
