@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from app.config import settings
 from app import sheets, groq_ai
@@ -190,4 +190,81 @@ async def api_create_link(request: Request, body: CreateLinkRequest):
         **link,
         "click_url": f"{base}/t/{token}",
         "pixel_url": f"{base}/p/{token}.png",
+    }
+
+
+# ── Link update / delete ──────────────────────────────────────────────────────
+
+class UpdateLinkRequest(BaseModel):
+    is_active: Optional[bool] = None
+    expires_at: Optional[datetime] = None
+    dest_url: Optional[str] = None
+    _fields_set: set = set()
+
+    @model_validator(mode="before")
+    @classmethod
+    def _capture_fields(cls, data):
+        return data
+
+
+@router.patch("/api/links/{token}")
+async def api_update_link(token: str, request: Request, body: UpdateLinkRequest):
+    require_auth(request)
+    raw = await request.json()
+    updates: dict = {}
+    if "is_active" in raw and raw["is_active"] is not None:
+        updates["is_active"] = str(raw["is_active"])
+    if "expires_at" in raw:
+        if raw["expires_at"] is None:
+            updates["expires_at"] = ""
+        else:
+            exp = datetime.fromisoformat(str(raw["expires_at"]).replace("Z", "+00:00"))
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            updates["expires_at"] = exp.isoformat()
+    if "dest_url" in raw and raw["dest_url"]:
+        updates["dest_url"] = raw["dest_url"]
+    if not updates:
+        raise HTTPException(status_code=400, detail="Nothing to update")
+    found = await sheets.update_link(token, updates)
+    if not found:
+        raise HTTPException(status_code=404, detail="Link not found")
+    return {"ok": True, **updates}
+
+
+@router.delete("/api/links/{token}")
+async def api_delete_link(token: str, request: Request):
+    require_auth(request)
+    found = await sheets.delete_link(token)
+    if not found:
+        raise HTTPException(status_code=404, detail="Link not found")
+    return {"ok": True}
+
+
+# ── Campaign management ────────────────────────────────────────────────────────
+
+class UpdateCampaignRequest(BaseModel):
+    is_active: bool
+
+
+@router.patch("/api/campaigns/{campaign_id}")
+async def api_update_campaign(campaign_id: str, request: Request, body: UpdateCampaignRequest):
+    require_auth(request)
+    count = await sheets.set_campaign_active(campaign_id, body.is_active)
+    return {"ok": True, "campaign_id": campaign_id, "links_updated": count}
+
+
+# ── Live poll ─────────────────────────────────────────────────────────────────
+
+@router.get("/api/poll")
+async def api_poll(request: Request):
+    require_auth(request)
+    events = sheets.all_events()
+    links  = sheets.all_links()
+    last   = events[-1] if events else None
+    return {
+        "event_count":     len(events),
+        "link_count":      len(links),
+        "last_event_at":   last.get("timestamp") if last else None,
+        "last_event_type": last.get("event_type") if last else None,
     }

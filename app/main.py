@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from app.routers import dashboard, tracking
 from app import sheets
@@ -19,3 +20,15 @@ app = FastAPI(
 
 app.include_router(tracking.router)
 app.include_router(dashboard.router)
+
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    sheets_ok = sheets._links_ws is not None and sheets._events_ws is not None
+    return {
+        "status":        "ok" if sheets_ok else "degraded",
+        "sheets":        "connected" if sheets_ok else "disconnected",
+        "cached_links":  len(sheets._cache["links"]),
+        "cached_events": len(sheets._cache["events"]),
+        "timestamp":     datetime.now(timezone.utc).isoformat(),
+    }

@@ -26,10 +26,7 @@
   body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
 
   /* ── Login ── */
-  #login-page {
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh;
-  }
+  #login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
   .login-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 40px; width: 360px;
@@ -51,9 +48,11 @@
   }
   .btn:hover { opacity: .85; }
   .btn-primary { background: var(--accent); color: #fff; width: 100%; justify-content: center; }
-  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
   .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
   .btn-danger  { background: var(--danger); color: #fff; }
+  .btn-warn    { background: transparent; border: 1px solid var(--warn); color: var(--warn); }
+  .btn-success { background: transparent; border: 1px solid var(--success); color: var(--success); }
   #login-error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
 
   /* ── App shell ── */
@@ -67,15 +66,15 @@
   }
   header .logo { font-weight: 700; font-size: 16px; letter-spacing: -.3px; }
   header .logo span { color: var(--accent); }
-  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
   main { padding: 28px; max-width: 1400px; margin: 0 auto; width: 100%; }
 
   /* ── Tabs ── */
-  .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .tabs { display: flex; gap: 2px; margin-bottom: 24px; border-bottom: 1px solid var(--border); overflow-x: auto; }
   .tab {
-    padding: 10px 18px; cursor: pointer; border: none; background: none;
-    color: var(--muted); font-size: 13px; font-weight: 500;
+    padding: 10px 16px; cursor: pointer; border: none; background: none;
+    color: var(--muted); font-size: 13px; font-weight: 500; white-space: nowrap;
     border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s;
   }
   .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -83,7 +82,7 @@
   .tab-panel.active { display: block; }
 
   /* ── Stats cards ── */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 28px; }
   .stat-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 20px;
@@ -100,10 +99,9 @@
   .create-panel h3 { margin-bottom: 14px; font-size: 14px; }
   .create-row { display: flex; gap: 10px; flex-wrap: wrap; }
   .create-row input, .create-row select {
-    flex: 1; min-width: 160px; padding: 8px 12px;
+    flex: 1; min-width: 140px; padding: 8px 12px;
     background: var(--bg); border: 1px solid var(--border);
-    border-radius: var(--radius); color: var(--text); font-size: 13px;
-    outline: none;
+    border-radius: var(--radius); color: var(--text); font-size: 13px; outline: none;
   }
   .create-row input:focus { border-color: var(--accent); }
   #create-result {
@@ -115,14 +113,15 @@
 
   /* ── Filters ── */
   .filter-bar {
-    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
     margin-bottom: 16px;
   }
   .filter-bar input, .filter-bar select {
-    padding: 7px 12px; background: var(--surface);
+    padding: 7px 10px; background: var(--surface);
     border: 1px solid var(--border); border-radius: var(--radius);
     color: var(--text); font-size: 13px; outline: none;
   }
+  .filter-bar input[type="datetime-local"] { color-scheme: dark; }
   .filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent); }
 
   /* ── Tables ── */
@@ -135,10 +134,15 @@
     border-bottom: 1px solid var(--border);
     background: var(--bg); position: sticky; top: 0;
   }
+  thead th[data-sort] { cursor: pointer; user-select: none; }
+  thead th[data-sort]:hover { color: var(--text); }
+  thead th[data-sort]::after { content: ' ⇅'; opacity: .35; font-size: 10px; }
+  thead th[data-sort].asc::after  { content: ' ↑'; opacity: 1; color: var(--accent); }
+  thead th[data-sort].desc::after { content: ' ↓'; opacity: 1; color: var(--accent); }
   tbody tr { border-bottom: 1px solid var(--border); }
   tbody tr:last-child { border-bottom: none; }
   tbody tr:hover { background: #ffffff06; }
-  td { padding: 9px 14px; vertical-align: top; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td { padding: 9px 14px; vertical-align: middle; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   td.wrap { white-space: normal; word-break: break-all; }
 
   .badge {
@@ -178,9 +182,35 @@
   #ai-response .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
   #ai-response .answer { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
   #ai-spinner { display: none; color: var(--muted); font-size: 12px; margin-top: 12px; }
+
+  /* ── Toasts ── */
+  #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast {
+    padding: 11px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500;
+    max-width: 320px; box-shadow: 0 4px 16px #0005;
+    animation: toast-in .2s ease; pointer-events: auto;
+  }
+  .toast-success { background: #1a2e1a; color: var(--success); border: 1px solid #4ade8055; }
+  .toast-error   { background: #2e1a1a; color: var(--danger);  border: 1px solid #f8717155; }
+  .toast-info    { background: #1a1d2f; color: var(--accent);  border: 1px solid #6366f155; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* ── Live dot ── */
+  .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--success); margin-right: 4px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+
+  /* ── Mobile ── */
+  @media (max-width: 640px) {
+    main { padding: 16px; }
+    header { padding: 0 16px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .create-row { flex-direction: column; }
+  }
 </style>
 </head>
 <body>
+
+<div id="toast-container"></div>
 
 <!-- ════════════════════════════════════════════════════════════ LOGIN ══ -->
 <div id="login-page">
@@ -201,6 +231,13 @@
     <div class="logo">pica<span>pool</span> tracker</div>
     <div class="header-actions">
       <span id="header-stats" style="color:var(--muted);font-size:12px;"></span>
+      <span id="live-indicator" style="display:none;color:var(--success);font-size:12px;align-items:center;">
+        <span class="live-dot"></span>Live
+      </span>
+      <button id="new-events-btn" class="btn btn-sm" style="background:#f8717122;color:var(--danger);border:1px solid #f8717155;display:none;"
+        onclick="loadAll();this.style.display='none';_lastEventCount=0;">
+      </button>
+      <button class="btn btn-sm btn-outline" id="refresh-btn" onclick="toggleAutoRefresh()">Auto-refresh</button>
       <button class="btn btn-sm btn-outline" onclick="location.href='/dashboard/logout'">Sign out</button>
     </div>
   </header>
@@ -218,7 +255,7 @@
 
     <!-- ── OVERVIEW ── -->
     <div id="tab-overview" class="tab-panel active">
-      <div class="stats-grid" id="stats-grid">
+      <div class="stats-grid">
         <div class="stat-card"><div class="label">Sent</div><div class="value" id="s-sent">—</div></div>
         <div class="stat-card"><div class="label">Opens</div><div class="value" id="s-opens">—</div><div class="sub" id="s-open-rate"></div></div>
         <div class="stat-card"><div class="label">Clicks</div><div class="value" id="s-clicks">—</div><div class="sub" id="s-click-rate"></div></div>
@@ -239,12 +276,11 @@
         <div class="chart-wrap"><canvas id="ts-chart"></canvas></div>
       </div>
 
-      <div class="section-title">Top Campaigns by Click Rate</div>
+      <div class="section-title">Top Campaigns <span style="color:var(--muted);font-size:12px;font-weight:400;">— click to drill in</span></div>
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>Campaign</th><th>Links</th>
-            <th>Opens</th><th>Clicks</th><th>Click Rate</th>
+            <th>Campaign</th><th>Links</th><th>Opens</th><th>Clicks</th><th>Click Rate</th>
           </tr></thead>
           <tbody id="camp-body"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
         </table>
@@ -264,17 +300,23 @@
         <input type="date" id="f-from" />
         <input type="date" id="f-to" />
         <label style="color:var(--muted);font-size:12px;display:flex;gap:6px;align-items:center;">
-          <input type="checkbox" id="f-bots" /> Include bots
+          <input type="checkbox" id="f-bots" /> Bots
         </label>
         <button class="btn btn-primary btn-sm" onclick="loadEvents()">Filter</button>
+        <button class="btn btn-sm btn-outline" onclick="exportEvents()">Export CSV</button>
         <span id="event-count" style="color:var(--muted);font-size:12px;margin-left:auto;"></span>
       </div>
       <div class="table-wrap">
-        <table>
+        <table id="events-table">
           <thead><tr>
-            <th>Time</th><th>Type</th><th>Token</th>
-            <th>Campaign</th><th>Recipient</th>
-            <th>IP</th><th>Referrer</th><th>UA</th>
+            <th data-sort="timestamp" onclick="sortEventsBy('timestamp')">Time</th>
+            <th>Type</th>
+            <th data-sort="token" onclick="sortEventsBy('token')">Token</th>
+            <th data-sort="campaign_id" onclick="sortEventsBy('campaign_id')">Campaign</th>
+            <th data-sort="recipient_id" onclick="sortEventsBy('recipient_id')">Recipient</th>
+            <th>Device</th>
+            <th data-sort="ip" onclick="sortEventsBy('ip')">IP</th>
+            <th>Referrer</th>
           </tr></thead>
           <tbody id="events-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
         </table>
@@ -287,6 +329,11 @@
         <select id="camp-selector" onchange="loadCampaignDetail()" style="min-width:220px;">
           <option value="">— select a campaign —</option>
         </select>
+        <div id="camp-status-actions" style="display:none;display:none;gap:8px;">
+          <button class="btn btn-sm btn-warn"    id="camp-pause-btn"  onclick="setCampaignActive(false)">Pause all links</button>
+          <button class="btn btn-sm btn-success" id="camp-resume-btn" onclick="setCampaignActive(true)">Resume all links</button>
+        </div>
+        <button class="btn btn-sm btn-outline" id="camp-export-btn" onclick="exportCampaignRecipients()" style="display:none;">Export Recipients CSV</button>
       </div>
       <div id="camp-placeholder" class="empty" style="padding:60px 0;">Select a campaign above to see detailed analysis.</div>
       <div id="camp-detail" style="display:none;">
@@ -312,7 +359,7 @@
       </div>
     </div>
 
-    <!-- ── SUMMARY ── -->
+    <!-- ── LINKS / SUMMARY ── -->
     <div id="tab-summary" class="tab-panel">
       <div class="filter-bar">
         <select id="sf-campaign" onchange="renderSummary()">
@@ -324,17 +371,25 @@
           <option value="clicked">Clicked</option>
           <option value="opened">Opened only</option>
           <option value="ignored">Ignored</option>
+          <option value="paused">Paused</option>
         </select>
+        <button class="btn btn-sm btn-outline" onclick="exportLinks()">Export CSV</button>
         <span id="summary-count" style="color:var(--muted);font-size:12px;margin-left:auto;"></span>
       </div>
       <div class="table-wrap">
-        <table>
+        <table id="summary-table">
           <thead><tr>
-            <th>Token</th><th>Campaign</th><th>Recipient</th>
-            <th>Opens</th><th>Clicks</th><th>Status</th>
-            <th>Click URL</th><th>Created</th>
+            <th data-sort="token"        onclick="sortSummaryBy('token')">Token</th>
+            <th data-sort="campaign_id"  onclick="sortSummaryBy('campaign_id')">Campaign</th>
+            <th data-sort="recipient_id" onclick="sortSummaryBy('recipient_id')">Recipient</th>
+            <th data-sort="opens"        onclick="sortSummaryBy('opens')">Opens</th>
+            <th data-sort="clicks"       onclick="sortSummaryBy('clicks')">Clicks</th>
+            <th>Status</th>
+            <th>Click URL</th>
+            <th data-sort="created_at"   onclick="sortSummaryBy('created_at')">Created</th>
+            <th>Actions</th>
           </tr></thead>
-          <tbody id="summary-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+          <tbody id="summary-body"><tr><td colspan="9" class="empty">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -345,7 +400,7 @@
         <h3>AI Analysis — powered by Groq</h3>
         <p>Ask anything about your campaigns. The AI sees your live aggregated stats.</p>
         <div class="ai-input-row">
-          <input id="ai-question" placeholder="e.g. Which campaign has the best click rate? Why might opens be low?" />
+          <input id="ai-question" placeholder="e.g. Which campaign has the best click rate?" />
           <button class="btn btn-primary" onclick="askAI()">Ask</button>
         </div>
         <div id="ai-spinner">Thinking…</div>
@@ -354,14 +409,13 @@
           <div class="answer" id="ai-answer"></div>
         </div>
       </div>
-
       <div style="margin-top:20px;" class="ai-panel">
         <h3 style="margin-bottom:12px;">Quick questions</h3>
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
           <button class="btn btn-sm btn-outline" onclick="quick('What is my overall open rate and click rate?')">Open &amp; click rates</button>
           <button class="btn btn-sm btn-outline" onclick="quick('Which campaign has the highest click rate?')">Best campaign</button>
           <button class="btn btn-sm btn-outline" onclick="quick('How many links are being ignored and what could that indicate?')">Ignored links</button>
-          <button class="btn btn-sm btn-outline" onclick="quick('Are there any bot hits distorting the data? How significant?')">Bot impact</button>
+          <button class="btn btn-sm btn-outline" onclick="quick('Are there any bot hits distorting the data?')">Bot impact</button>
           <button class="btn btn-sm btn-outline" onclick="quick('Summarise the overall health of my outreach in 3 bullet points.')">Health summary</button>
           <button class="btn btn-sm btn-outline" onclick="quick('What actions should I take to improve engagement?')">Recommendations</button>
         </div>
@@ -373,11 +427,17 @@
       <div class="create-panel">
         <h3>Generate Tracking Link</h3>
         <div class="create-row">
-          <input id="c-url" placeholder="Destination URL (required)" style="flex:3;" />
-          <input id="c-campaign" placeholder="Campaign ID" />
+          <input id="c-url"       placeholder="Destination URL (required)" style="flex:3;" />
+          <input id="c-campaign"  placeholder="Campaign ID" />
           <input id="c-recipient" placeholder="Recipient ID" />
-          <input id="c-token" placeholder="Custom token (optional)" />
-          <button class="btn btn-primary" onclick="createLink()">Create</button>
+          <input id="c-token"     placeholder="Custom token (optional)" />
+        </div>
+        <div class="create-row" style="margin-top:10px;">
+          <label style="color:var(--muted);font-size:12px;display:flex;gap:6px;align-items:center;white-space:nowrap;">
+            Expires at
+            <input type="datetime-local" id="c-expires" style="flex:unset;min-width:unset;" />
+          </label>
+          <button class="btn btn-primary" style="width:auto;" onclick="createLink()">Create</button>
         </div>
         <pre id="create-result"></pre>
       </div>
@@ -388,7 +448,7 @@
           Paste recipient IDs (one per line). A unique tracking link is created for each.
         </p>
         <div class="create-row" style="margin-bottom:12px;">
-          <input id="b-url" placeholder="Destination URL" style="flex:3;" />
+          <input id="b-url"      placeholder="Destination URL" style="flex:3;" />
           <input id="b-campaign" placeholder="Campaign ID" />
         </div>
         <textarea id="b-recipients" rows="6"
@@ -407,42 +467,51 @@
 
 <script>
 // ════════════════════════════════════════════ State
-let _tsChart   = null;
-let _campChart = null;
-let _summaryData = [];
-let _bulkLinks   = [];
-let _campaigns   = [];
+let _tsChart        = null;
+let _campChart      = null;
+let _summaryData    = [];
+let _eventsData     = [];
+let _bulkLinks      = [];
+let _campaigns      = [];
+let _autoRefreshTimer = null;
+let _lastEventCount = 0;
+let _eventsSortState   = { field: 'timestamp', asc: false };
+let _summarySortState  = { field: 'created_at', asc: false };
+let _campRecipData  = [];
+
+// ════════════════════════════════════════════ Toast
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
 
 // ════════════════════════════════════════════ Auth
 async function checkAuth() {
-  try {
-    const r = await fetch('/api/me');
-    if (r.ok) { showApp(); return; }
-  } catch(_) {}
+  try { const r = await fetch('/api/me'); if (r.ok) { showApp(); return; } } catch(_) {}
   showLogin();
 }
-
 function showLogin() {
   document.getElementById('login-page').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
 }
-
 function showApp() {
   document.getElementById('login-page').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   loadAll();
+  startPolling();
 }
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const pw = document.getElementById('password-input').value;
+  const pw  = document.getElementById('password-input').value;
   const err = document.getElementById('login-error');
   err.style.display = 'none';
-  const fd = new FormData();
-  fd.append('password', pw);
+  const fd = new FormData(); fd.append('password', pw);
   const r = await fetch('/dashboard/login', { method: 'POST', body: fd });
-  if (r.ok) { showApp(); }
-  else { err.style.display = 'block'; }
+  if (r.ok) { showApp(); } else { err.style.display = 'block'; }
 });
 
 // ════════════════════════════════════════════ Tabs
@@ -454,6 +523,46 @@ document.querySelectorAll('.tab').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
   });
 });
+
+// ════════════════════════════════════════════ Auto-refresh
+function toggleAutoRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  const ind = document.getElementById('live-indicator');
+  if (_autoRefreshTimer) {
+    clearInterval(_autoRefreshTimer);
+    _autoRefreshTimer = null;
+    btn.textContent = 'Auto-refresh';
+    btn.style.color = '';
+    ind.style.display = 'none';
+    toast('Auto-refresh off', 'info');
+  } else {
+    _autoRefreshTimer = setInterval(() => { loadAll(); pollLive(); }, 30000);
+    btn.innerHTML = '<span class="live-dot"></span>Live';
+    btn.style.color = 'var(--success)';
+    ind.style.display = 'inline-flex';
+    toast('Auto-refresh on — updates every 30 s', 'info');
+    pollLive();
+  }
+}
+
+// ════════════════════════════════════════════ Live polling
+function startPolling() {
+  pollLive();
+  setInterval(pollLive, 25000);
+}
+
+async function pollLive() {
+  try {
+    const d = await fetch('/api/poll').then(r => r.json());
+    if (_lastEventCount > 0 && d.event_count > _lastEventCount) {
+      const delta = d.event_count - _lastEventCount;
+      const btn = document.getElementById('new-events-btn');
+      btn.textContent = `+${delta} new event${delta !== 1 ? 's' : ''} — click to refresh`;
+      btn.style.display = 'inline-flex';
+    }
+    if (_lastEventCount === 0) _lastEventCount = d.event_count;
+  } catch (_) {}
+}
 
 // ════════════════════════════════════════════ Load all
 async function loadAll() {
@@ -468,28 +577,23 @@ async function loadOverview() {
     fetch('/api/campaigns').then(r => r.json()),
   ]);
 
-  // Stats
-  const sent = ov.total_sent || 0;
-  const opens = ov.total_opens || 0;
+  const sent   = ov.total_sent   || 0;
+  const opens  = ov.total_opens  || 0;
   const clicks = ov.total_clicks || 0;
   document.getElementById('s-sent').textContent    = fmt(sent);
   document.getElementById('s-opens').textContent   = fmt(opens);
   document.getElementById('s-clicks').textContent  = fmt(clicks);
   document.getElementById('s-ignored').textContent = fmt(ov.total_ignored || 0);
   document.getElementById('s-bots').textContent    = fmt(ov.total_bot_hits || 0);
-  document.getElementById('s-open-rate').textContent  = sent ? pct(opens / sent) + ' open rate'   : '';
+  document.getElementById('s-open-rate').textContent  = sent ? pct(opens  / sent) + ' open rate'  : '';
   document.getElementById('s-click-rate').textContent = sent ? pct(clicks / sent) + ' click rate' : '';
   document.getElementById('s-threshold').textContent  = ov.ignored_threshold_hours || 48;
+  document.getElementById('header-stats').textContent = `${fmt(sent)} sent · ${fmt(clicks)} clicks`;
 
-  document.getElementById('header-stats').textContent =
-    `${fmt(sent)} sent · ${fmt(clicks)} clicks`;
-
-  // Time-series chart
   renderTsChart(ts);
 
-  // Campaigns
-  _campaigns = camps;
   // Populate campaign dropdowns
+  _campaigns = camps;
   const campOpts = camps.map(c => `<option value="${esc(c.campaign_id)}">${esc(c.campaign_id)}</option>`).join('');
   ['camp-selector', 'sf-campaign'].forEach(sid => {
     const el = document.getElementById(sid);
@@ -502,8 +606,8 @@ async function loadOverview() {
   if (!camps.length) { campBody.innerHTML = '<tr><td colspan="5" class="empty">No data yet</td></tr>'; return; }
   const maxClicks = Math.max(...camps.map(c => c.clicks || 0), 1);
   campBody.innerHTML = camps.map(c => {
-    const rate = (c.total_links > 0) ? pct((c.clicks || 0) / c.total_links) : '—';
-    const w = Math.round(((c.clicks || 0) / maxClicks) * 100);
+    const rate = c.total_links > 0 ? pct((c.clicks || 0) / c.total_links) : '—';
+    const w    = Math.round(((c.clicks || 0) / maxClicks) * 100);
     return `<tr style="cursor:pointer;" onclick="goCampaign('${esc(c.campaign_id)}')">
       <td><strong style="color:var(--accent2);">${esc(c.campaign_id)}</strong></td>
       <td>${fmt(c.total_links)}</td>
@@ -520,15 +624,13 @@ async function loadOverview() {
 }
 
 function renderTsChart(rows) {
-  // Build hourly labels; collect opens & clicks separately
-  const opens  = {}, clicks = {};
+  const opens = {}, clicks = {};
   rows.forEach(r => {
-    const h = r.hour ? r.hour.slice(0, 16).replace('T', ' ') : '?';
+    const h = r.hour ? new Date(r.hour).toLocaleString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '?';
     if (r.event_type === 'open')  opens[h]  = (opens[h]  || 0) + Number(r.count);
     if (r.event_type === 'click') clicks[h] = (clicks[h] || 0) + Number(r.count);
   });
   const labels = [...new Set([...Object.keys(opens), ...Object.keys(clicks)])].sort();
-
   const data = {
     labels,
     datasets: [
@@ -536,11 +638,9 @@ function renderTsChart(rows) {
       { label: 'Clicks', data: labels.map(l => clicks[l] || 0), borderColor: '#6366f1', backgroundColor: '#6366f122', tension: .3, fill: true },
     ],
   };
-
   if (_tsChart) { _tsChart.data = data; _tsChart.update(); return; }
   _tsChart = new Chart(document.getElementById('ts-chart'), {
-    type: 'line',
-    data,
+    type: 'line', data,
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { labels: { color: '#94a3b8' } } },
@@ -565,30 +665,72 @@ async function loadEvents() {
   if (v('f-to'))        params.set('date_to',      v('f-to') + 'T23:59:59');
   if (document.getElementById('f-bots').checked) params.set('include_bots', 'true');
 
-  const rows = await fetch('/api/events?' + params).then(r => r.json());
-  document.getElementById('event-count').textContent = rows.length + ' rows';
+  _eventsData = await fetch('/api/events?' + params).then(r => r.json());
+  renderEventsTable();
+}
 
+function sortEventsBy(field) {
+  if (_eventsSortState.field === field) {
+    _eventsSortState.asc = !_eventsSortState.asc;
+  } else {
+    _eventsSortState = { field, asc: true };
+  }
+  document.querySelectorAll('#events-table thead th[data-sort]').forEach(th => {
+    th.classList.remove('asc', 'desc');
+    if (th.dataset.sort === field) th.classList.add(_eventsSortState.asc ? 'asc' : 'desc');
+  });
+  renderEventsTable();
+}
+
+function renderEventsTable() {
+  const { field, asc } = _eventsSortState;
+  const data = [..._eventsData].sort((a, b) => {
+    const va = a[field] || '', vb = b[field] || '';
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+
+  document.getElementById('event-count').textContent = data.length + ' rows';
   const body = document.getElementById('events-body');
-  if (!rows.length) { body.innerHTML = '<tr><td colspan="8" class="empty">No events match your filters</td></tr>'; return; }
+  if (!data.length) { body.innerHTML = '<tr><td colspan="8" class="empty">No events match your filters</td></tr>'; return; }
 
-  body.innerHTML = rows.map(e => `<tr>
+  body.innerHTML = data.map(e => `<tr>
     <td style="white-space:nowrap;">${fmtTime(e.timestamp)}</td>
     <td>${e.event_type === 'open'
       ? `<span class="badge badge-open">open</span>`
       : `<span class="badge badge-click">click</span>`}
       ${String(e.is_preview_bot).toLowerCase() === 'true' ? `<span class="badge badge-bot">bot</span>` : ''}</td>
     <td><code>${esc(e.token)}</code></td>
-    <td>${esc(e.campaign_id || '—')}</td>
+    <td>${esc(e.campaign_id  || '—')}</td>
     <td>${esc(e.recipient_id || '—')}</td>
+    <td style="white-space:nowrap;">${esc(parseDevice(e.user_agent))}</td>
     <td>${esc(e.ip || '—')}</td>
-    <td title="${esc(e.referrer || '')}">${esc(trunc(e.referrer, 40))}</td>
-    <td title="${esc(e.user_agent || '')}">${esc(trunc(e.user_agent, 50))}</td>
+    <td title="${esc(e.referrer || '')}">${esc(trunc(e.referrer, 36))}</td>
   </tr>`).join('');
 }
 
-// ════════════════════════════════════════════ Summary
+function exportEvents() {
+  if (!_eventsData.length) { toast('No events to export', 'info'); return; }
+  const fields = ['timestamp', 'event_type', 'token', 'campaign_id', 'recipient_id', 'ip', 'user_agent', 'referrer', 'is_preview_bot'];
+  exportCSV(_eventsData, fields, 'events.csv');
+  toast('Events exported');
+}
+
+// ════════════════════════════════════════════ Summary / Links
 async function loadSummary() {
   _summaryData = await fetch('/api/summary').then(r => r.json());
+  renderSummary();
+}
+
+function sortSummaryBy(field) {
+  if (_summarySortState.field === field) {
+    _summarySortState.asc = !_summarySortState.asc;
+  } else {
+    _summarySortState = { field, asc: field !== 'clicks' && field !== 'opens' };
+  }
+  document.querySelectorAll('#summary-table thead th[data-sort]').forEach(th => {
+    th.classList.remove('asc', 'desc');
+    if (th.dataset.sort === field) th.classList.add(_summarySortState.asc ? 'asc' : 'desc');
+  });
   renderSummary();
 }
 
@@ -596,168 +738,98 @@ function renderSummary() {
   const campaign = document.getElementById('sf-campaign').value;
   const search   = document.getElementById('sf-search').value.toLowerCase();
   const status   = document.getElementById('sf-status').value;
-  const base = location.origin;
+  const base     = location.origin;
 
   let data = _summaryData.filter(r => {
     if (campaign && r.campaign_id !== campaign) return false;
     if (search && !`${r.token} ${r.recipient_id}`.toLowerCase().includes(search)) return false;
-    if (status === 'clicked')  return r.clicks > 0;
-    if (status === 'opened')   return r.opens > 0 && r.clicks === 0;
-    if (status === 'ignored')  return r.ignored;
+    if (status === 'clicked') return r.clicks > 0;
+    if (status === 'opened')  return r.opens > 0 && r.clicks === 0;
+    if (status === 'ignored') return r.ignored;
+    if (status === 'paused')  return String(r.is_active).toLowerCase() === 'false';
     return true;
+  });
+
+  // Sort
+  const { field, asc } = _summarySortState;
+  data.sort((a, b) => {
+    const va = a[field] ?? '', vb = b[field] ?? '';
+    if (typeof va === 'number' || !isNaN(va)) return asc ? Number(va) - Number(vb) : Number(vb) - Number(va);
+    return asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
   });
 
   document.getElementById('summary-count').textContent = data.length + ' links';
   const body = document.getElementById('summary-body');
-  if (!data.length) { body.innerHTML = '<tr><td colspan="8" class="empty">Nothing found</td></tr>'; return; }
+  if (!data.length) { body.innerHTML = '<tr><td colspan="9" class="empty">Nothing found</td></tr>'; return; }
 
   body.innerHTML = data.map(r => {
+    const isActive = String(r.is_active).toLowerCase() !== 'false';
     let badge;
-    if (r.clicks > 0)       badge = `<span class="badge badge-click">clicked</span>`;
-    else if (r.opens > 0)   badge = `<span class="badge badge-open">opened</span>`;
-    else if (r.ignored)     badge = `<span class="badge badge-ignored">ignored</span>`;
-    else                    badge = `<span class="badge" style="background:#ffffff11;color:var(--muted)">pending</span>`;
+    if (!isActive)         badge = `<span class="badge badge-bot">paused</span>`;
+    else if (r.clicks > 0) badge = `<span class="badge badge-click">clicked</span>`;
+    else if (r.opens  > 0) badge = `<span class="badge badge-open">opened</span>`;
+    else if (r.ignored)    badge = `<span class="badge badge-ignored">ignored</span>`;
+    else                   badge = `<span class="badge" style="background:#ffffff11;color:var(--muted)">pending</span>`;
 
     const clickUrl = `${base}/t/${r.token}`;
     return `<tr>
       <td><code>${esc(r.token)}</code></td>
-      <td>${esc(r.campaign_id || '—')}</td>
+      <td>${esc(r.campaign_id  || '—')}</td>
       <td>${esc(r.recipient_id || '—')}</td>
       <td>${fmt(r.opens)}</td>
       <td>${fmt(r.clicks)}</td>
       <td>${badge}</td>
       <td>
-        <a href="${esc(clickUrl)}" target="_blank" style="color:var(--accent2);font-size:11px;">${esc(trunc(clickUrl, 40))}</a>
+        <a href="${esc(clickUrl)}" target="_blank" style="color:var(--accent2);font-size:11px;">${esc(trunc(clickUrl, 36))}</a>
         <button class="copy-btn" onclick="copyText('${esc(clickUrl)}')">copy</button>
       </td>
       <td style="white-space:nowrap;color:var(--muted);">${fmtDate(r.created_at)}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm ${isActive ? 'btn-warn' : 'btn-success'}"
+          onclick="toggleLinkActive('${esc(r.token)}', ${isActive})"
+          style="padding:3px 8px;font-size:11px;">${isActive ? 'Pause' : 'Resume'}</button>
+        <button class="btn btn-sm btn-outline"
+          onclick="confirmDeleteLink('${esc(r.token)}')"
+          style="padding:3px 8px;font-size:11px;color:var(--danger);border-color:var(--danger);">Del</button>
+      </td>
     </tr>`;
   }).join('');
 }
 
-// ════════════════════════════════════════════ Create link
-async function createLink() {
-  const url  = document.getElementById('c-url').value.trim();
-  if (!url) { alert('Destination URL is required'); return; }
-  const body = {
-    dest_url:     url,
-    campaign_id:  document.getElementById('c-campaign').value.trim() || null,
-    recipient_id: document.getElementById('c-recipient').value.trim() || null,
-    token:        document.getElementById('c-token').value.trim()     || null,
-  };
-  const r = await fetch('/api/links', {
-    method: 'POST',
+function exportLinks() {
+  if (!_summaryData.length) { toast('No links to export', 'info'); return; }
+  const fields = ['token', 'campaign_id', 'recipient_id', 'dest_url', 'created_at', 'is_active', 'expires_at', 'opens', 'clicks'];
+  exportCSV(_summaryData, fields, 'links.csv');
+  toast('Links exported');
+}
+
+// ════════════════════════════════════════════ Link actions
+async function toggleLinkActive(token, currentlyActive) {
+  const r = await fetch(`/api/links/${encodeURIComponent(token)}`, {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ is_active: !currentlyActive }),
   });
-  const data = await r.json();
-  const el = document.getElementById('create-result');
-  el.style.display = 'block';
-  if (!r.ok) { el.textContent = 'Error: ' + JSON.stringify(data); return; }
-  el.innerHTML =
-    `<strong>Token:</strong> ${esc(data.token)}\n` +
-    `<strong>Click URL:</strong> <a href="${esc(data.click_url)}" target="_blank">${esc(data.click_url)}</a> <button class="copy-btn" onclick="copyText('${esc(data.click_url)}')">copy</button>\n` +
-    `<strong>Pixel URL:</strong> <a href="${esc(data.pixel_url)}" target="_blank">${esc(data.pixel_url)}</a> <button class="copy-btn" onclick="copyText('${esc(data.pixel_url)}')">copy</button>`;
-  loadSummary();
-}
-
-// ════════════════════════════════════════════ Bulk create
-async function bulkCreate() {
-  const url      = document.getElementById('b-url').value.trim();
-  const campaign = document.getElementById('b-campaign').value.trim();
-  const ids      = document.getElementById('b-recipients').value.trim().split('\n').map(s => s.trim()).filter(Boolean);
-  if (!url || !ids.length) { alert('URL and at least one recipient ID are required'); return; }
-
-  const status = document.getElementById('bulk-status');
-  status.textContent = `Creating ${ids.length} links…`;
-  _bulkLinks = [];
-
-  for (const rid of ids) {
-    const r = await fetch('/api/links', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dest_url: url, campaign_id: campaign || null, recipient_id: rid }),
-    });
-    const d = await r.json();
-    _bulkLinks.push({ recipient_id: rid, token: d.token, click_url: d.click_url, pixel_url: d.pixel_url });
-  }
-
-  status.textContent = `Done — ${_bulkLinks.length} links created`;
-  const el = document.getElementById('bulk-result');
-  el.style.display = 'block';
-  el.textContent = _bulkLinks.map(l =>
-    `${l.recipient_id}\t${l.click_url}\t${l.pixel_url}`
-  ).join('\n');
-  loadSummary();
-}
-
-function downloadCSV() {
-  if (!_bulkLinks.length) { alert('Generate links first'); return; }
-  const rows = ['recipient_id,token,click_url,pixel_url',
-    ..._bulkLinks.map(l => `${csvCell(l.recipient_id)},${l.token},${l.click_url},${l.pixel_url}`)
-  ];
-  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'tracking-links.csv';
-  a.click();
-}
-
-// ════════════════════════════════════════════ Helpers
-const fmt  = n => Number(n).toLocaleString();
-const pct  = r => (r * 100).toFixed(1) + '%';
-const trunc = (s, n) => s && s.length > n ? s.slice(0, n) + '…' : (s || '');
-const fmtTime = iso => {
-  if (!iso) return '—';
-  try { return new Date(iso).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
-  catch (_) { return iso; }
-};
-const fmtDate = iso => {
-  if (!iso) return '—';
-  try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
-  catch (_) { return iso.slice(0, 10); }
-};
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function csvCell(s) { return `"${String(s ?? '').replace(/"/g, '""')}"`; }
-function copyText(t) { navigator.clipboard.writeText(t).catch(() => {}); }
-function id(s) { return document.getElementById(s); }
-
-// ════════════════════════════════════════════ AI Analysis
-async function askAI() {
-  const q = document.getElementById('ai-question').value.trim();
-  if (!q) return;
-  document.getElementById('ai-spinner').style.display = 'block';
-  document.getElementById('ai-response').style.display = 'none';
-  try {
-    const r = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q }),
-    });
-    const data = await r.json();
-    document.getElementById('ai-answer').textContent = data.answer || data.detail || 'No response.';
-    document.getElementById('ai-response').style.display = 'block';
-  } catch (e) {
-    document.getElementById('ai-answer').textContent = 'Request failed: ' + e.message;
-    document.getElementById('ai-response').style.display = 'block';
-  } finally {
-    document.getElementById('ai-spinner').style.display = 'none';
+  if (r.ok) {
+    toast(`Link ${currentlyActive ? 'paused' : 'resumed'}`);
+    await loadSummary();
+  } else {
+    toast('Update failed', 'error');
   }
 }
 
-function quick(q) {
-  document.getElementById('ai-question').value = q;
-  askAI();
+async function confirmDeleteLink(token) {
+  if (!confirm(`Delete link "${token}"? This removes it from Sheets and cannot be undone.`)) return;
+  const r = await fetch(`/api/links/${encodeURIComponent(token)}`, { method: 'DELETE' });
+  if (r.ok) {
+    toast('Link deleted');
+    await Promise.all([loadSummary(), loadOverview()]);
+  } else {
+    toast('Delete failed', 'error');
+  }
 }
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.activeElement.id === 'ai-question') askAI();
-});
 
 // ════════════════════════════════════════════ Campaign detail
-
 function goCampaign(cid) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -771,16 +843,22 @@ async function loadCampaignDetail() {
   const cid         = document.getElementById('camp-selector').value;
   const placeholder = document.getElementById('camp-placeholder');
   const detail      = document.getElementById('camp-detail');
-  if (!cid) { placeholder.style.display = 'block'; detail.style.display = 'none'; return; }
-  placeholder.style.display = 'none';
-  detail.style.display = 'block';
+  const actions     = document.getElementById('camp-status-actions');
+  const exportBtn   = document.getElementById('camp-export-btn');
+
+  if (!cid) {
+    placeholder.style.display = 'block'; detail.style.display = 'none';
+    actions.style.display = 'none'; exportBtn.style.display = 'none';
+    return;
+  }
+  placeholder.style.display = 'none'; detail.style.display = 'block';
+  actions.style.display = 'flex';     exportBtn.style.display = 'inline-flex';
   document.getElementById('camp-chart-title').textContent = `${cid} — Events Over Time`;
   document.getElementById('camp-recip-body').innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
 
   const events = await fetch(`/api/events?campaign_id=${encodeURIComponent(cid)}&limit=2000`).then(r => r.json());
   const real   = events.filter(e => String(e.is_preview_bot).toLowerCase() !== 'true');
 
-  // Per-token rollup
   const byToken = {};
   real.forEach(e => {
     const tk = e.token;
@@ -803,7 +881,7 @@ async function loadCampaignDetail() {
   document.getElementById('cs-open-rate').textContent  = totalLinks ? pct(totalOpens  / totalLinks) + ' open rate'  : '';
   document.getElementById('cs-click-rate').textContent = totalLinks ? pct(totalClicks / totalLinks) + ' click rate' : '';
 
-  // Hourly timeseries
+  // Timeseries
   const hourMap = {};
   real.forEach(e => {
     const d = new Date(e.timestamp); d.setMinutes(0, 0, 0, 0);
@@ -835,10 +913,10 @@ async function loadCampaignDetail() {
     });
   }
 
-  // Recipients table — merge events with summary (to show pending/ignored rows too)
+  // Recipients table
   const summaryMap = Object.fromEntries(campSummary.map(r => [r.token, r]));
   const allTks     = [...new Set([...Object.keys(byToken), ...campSummary.map(r => r.token)])];
-  const rows       = allTks.map(tk => {
+  _campRecipData   = allTks.map(tk => {
     const ev = byToken[tk]    || { opens: 0, clicks: 0, recipient: '', lastEvent: '' };
     const sm = summaryMap[tk] || {};
     return { token: tk, opens: ev.opens, clicks: ev.clicks,
@@ -846,8 +924,13 @@ async function loadCampaignDetail() {
              lastEvent: ev.lastEvent, ignored: sm.ignored || false };
   }).sort((a, b) => b.clicks - a.clicks || b.opens - a.opens);
 
-  document.getElementById('camp-recip-body').innerHTML = rows.length
-    ? rows.map(r => {
+  renderCampRecipients();
+}
+
+function renderCampRecipients() {
+  const body = document.getElementById('camp-recip-body');
+  body.innerHTML = _campRecipData.length
+    ? _campRecipData.map(r => {
         let badge;
         if (r.clicks > 0)     badge = `<span class="badge badge-click">clicked</span>`;
         else if (r.opens > 0) badge = `<span class="badge badge-open">opened</span>`;
@@ -863,6 +946,172 @@ async function loadCampaignDetail() {
         </tr>`;
       }).join('')
     : '<tr><td colspan="6" class="empty">No recipients found</td></tr>';
+}
+
+async function setCampaignActive(active) {
+  const cid = document.getElementById('camp-selector').value;
+  if (!cid) return;
+  const r = await fetch(`/api/campaigns/${encodeURIComponent(cid)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_active: active }),
+  });
+  if (r.ok) {
+    const d = await r.json();
+    toast(`Campaign ${active ? 'resumed' : 'paused'} — ${d.links_updated} link${d.links_updated !== 1 ? 's' : ''} updated`);
+    await Promise.all([loadSummary(), loadOverview()]);
+    loadCampaignDetail();
+  } else {
+    toast('Update failed', 'error');
+  }
+}
+
+function exportCampaignRecipients() {
+  if (!_campRecipData.length) { toast('No recipients to export', 'info'); return; }
+  const cid = document.getElementById('camp-selector').value || 'campaign';
+  exportCSV(_campRecipData, ['recipient', 'token', 'opens', 'clicks', 'lastEvent', 'ignored'], `${cid}-recipients.csv`);
+  toast('Recipients exported');
+}
+
+// ════════════════════════════════════════════ Create link
+async function createLink() {
+  const url = document.getElementById('c-url').value.trim();
+  if (!url) { toast('Destination URL is required', 'error'); return; }
+  const exp = document.getElementById('c-expires').value;
+  const body = {
+    dest_url:     url,
+    campaign_id:  document.getElementById('c-campaign').value.trim()  || null,
+    recipient_id: document.getElementById('c-recipient').value.trim() || null,
+    token:        document.getElementById('c-token').value.trim()     || null,
+    expires_at:   exp ? new Date(exp).toISOString() : null,
+  };
+  const r = await fetch('/api/links', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json();
+  const el = document.getElementById('create-result');
+  el.style.display = 'block';
+  if (!r.ok) { el.textContent = 'Error: ' + JSON.stringify(data); toast('Create failed', 'error'); return; }
+  el.innerHTML =
+    `<strong>Token:</strong> ${esc(data.token)}\n` +
+    `<strong>Click URL:</strong> <a href="${esc(data.click_url)}" target="_blank">${esc(data.click_url)}</a> <button class="copy-btn" onclick="copyText('${esc(data.click_url)}')">copy</button>\n` +
+    `<strong>Pixel URL:</strong> <a href="${esc(data.pixel_url)}" target="_blank">${esc(data.pixel_url)}</a> <button class="copy-btn" onclick="copyText('${esc(data.pixel_url)}')">copy</button>`;
+  toast('Link created');
+  loadSummary();
+}
+
+// ════════════════════════════════════════════ Bulk create
+async function bulkCreate() {
+  const url      = document.getElementById('b-url').value.trim();
+  const campaign = document.getElementById('b-campaign').value.trim();
+  const ids      = document.getElementById('b-recipients').value.trim().split('\n').map(s => s.trim()).filter(Boolean);
+  if (!url || !ids.length) { toast('URL and at least one recipient ID required', 'error'); return; }
+
+  const status = document.getElementById('bulk-status');
+  status.textContent = `Creating ${ids.length} links…`;
+  _bulkLinks = [];
+
+  for (const rid of ids) {
+    const r = await fetch('/api/links', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dest_url: url, campaign_id: campaign || null, recipient_id: rid }),
+    });
+    const d = await r.json();
+    _bulkLinks.push({ recipient_id: rid, token: d.token, click_url: d.click_url, pixel_url: d.pixel_url });
+  }
+
+  status.textContent = `Done — ${_bulkLinks.length} links created`;
+  const el = document.getElementById('bulk-result');
+  el.style.display = 'block';
+  el.textContent = _bulkLinks.map(l => `${l.recipient_id}\t${l.click_url}\t${l.pixel_url}`).join('\n');
+  toast(`${_bulkLinks.length} links created`);
+  loadSummary();
+}
+
+function downloadCSV() {
+  if (!_bulkLinks.length) { toast('Generate links first', 'info'); return; }
+  const rows = ['recipient_id,token,click_url,pixel_url',
+    ..._bulkLinks.map(l => `${csvCell(l.recipient_id)},${l.token},${l.click_url},${l.pixel_url}`)
+  ];
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'tracking-links.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ════════════════════════════════════════════ AI Analysis
+async function askAI() {
+  const q = document.getElementById('ai-question').value.trim();
+  if (!q) return;
+  document.getElementById('ai-spinner').style.display = 'block';
+  document.getElementById('ai-response').style.display = 'none';
+  try {
+    const r = await fetch('/api/analyze', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q }),
+    });
+    const data = await r.json();
+    document.getElementById('ai-answer').textContent = data.answer || data.detail || 'No response.';
+    document.getElementById('ai-response').style.display = 'block';
+  } catch (e) {
+    document.getElementById('ai-answer').textContent = 'Request failed: ' + e.message;
+    document.getElementById('ai-response').style.display = 'block';
+  } finally {
+    document.getElementById('ai-spinner').style.display = 'none';
+  }
+}
+function quick(q) { document.getElementById('ai-question').value = q; askAI(); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement.id === 'ai-question') askAI();
+});
+
+// ════════════════════════════════════════════ Helpers
+const fmt   = n => Number(n).toLocaleString();
+const pct   = r => (r * 100).toFixed(1) + '%';
+const trunc = (s, n) => s && s.length > n ? s.slice(0, n) + '…' : (s || '');
+
+const fmtTime = iso => {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleString(undefined, { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' }); }
+  catch (_) { return iso; }
+};
+const fmtDate = iso => {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }); }
+  catch (_) { return iso.slice(0, 10); }
+};
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function csvCell(s) { return `"${String(s ?? '').replace(/"/g, '""')}"`; }
+function copyText(t) {
+  navigator.clipboard.writeText(t).then(() => toast('Copied!')).catch(() => toast('Copy failed', 'error'));
+}
+
+function parseDevice(ua) {
+  if (!ua) return '—';
+  if (/iPhone/.test(ua))           return 'iPhone';
+  if (/iPad/.test(ua))             return 'iPad';
+  if (/Android.*Mobile/.test(ua))  return 'Android';
+  if (/Android/.test(ua))          return 'Android Tablet';
+  if (/Windows/.test(ua))          return 'Windows';
+  if (/Macintosh|Mac OS/.test(ua)) return 'Mac';
+  if (/Linux/.test(ua))            return 'Linux';
+  return 'Desktop';
+}
+
+function exportCSV(data, fields, filename) {
+  const header = fields.join(',');
+  const rows   = data.map(r => fields.map(f => csvCell(r[f] ?? '')).join(','));
+  const blob   = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
+  const a      = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ════════════════════════════════════════════ Boot

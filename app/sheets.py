@@ -157,6 +157,79 @@ def enqueue_event(event: dict) -> None:
     _cache["events"].append(event)
 
 
+# ── Link updates / deletes ────────────────────────────────────────────────────
+
+def _sync_update_link(token: str, updates: dict) -> bool:
+    if _links_ws is None:
+        raise RuntimeError("Google Sheets is not connected")
+    import gspread
+    try:
+        cell = _links_ws.find(token, in_column=1)
+    except gspread.exceptions.CellNotFound:
+        return False
+    if cell is None:
+        return False
+    row = _links_ws.row_values(cell.row)
+    row_dict = dict(zip(LINKS_HDR, row + [""] * max(0, len(LINKS_HDR) - len(row))))
+    row_dict.update({k: str(v) for k, v in updates.items()})
+    _links_ws.update(f"A{cell.row}", [[row_dict.get(h, "") for h in LINKS_HDR]])
+    for link in _cache["links"]:
+        if link.get("token") == token:
+            link.update({k: str(v) for k, v in updates.items()})
+            break
+    return True
+
+
+async def update_link(token: str, updates: dict) -> bool:
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _sync_update_link, token, updates)
+
+
+def _sync_delete_link(token: str) -> bool:
+    if _links_ws is None:
+        raise RuntimeError("Google Sheets is not connected")
+    import gspread
+    try:
+        cell = _links_ws.find(token, in_column=1)
+    except gspread.exceptions.CellNotFound:
+        return False
+    if cell is None:
+        return False
+    _links_ws.delete_rows(cell.row)
+    _cache["links"][:] = [l for l in _cache["links"] if l.get("token") != token]
+    return True
+
+
+async def delete_link(token: str) -> bool:
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _sync_delete_link, token)
+
+
+def _sync_set_campaign_active(campaign_id: str, is_active: bool) -> int:
+    if _links_ws is None:
+        raise RuntimeError("Google Sheets is not connected")
+    rows = _links_ws.get_all_values()
+    if not rows:
+        return 0
+    start      = 1 if rows[0] == LINKS_HDR else 0
+    camp_idx   = LINKS_HDR.index("campaign_id")
+    active_idx = LINKS_HDR.index("is_active")
+    count = 0
+    for i, row in enumerate(rows[start:], start=start + 1):
+        if len(row) > camp_idx and row[camp_idx] == campaign_id:
+            _links_ws.update_cell(i, active_idx + 1, str(is_active))
+            count += 1
+    for link in _cache["links"]:
+        if link.get("campaign_id") == campaign_id:
+            link["is_active"] = str(is_active)
+    return count
+
+
+async def set_campaign_active(campaign_id: str, is_active: bool) -> int:
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _sync_set_campaign_active, campaign_id, is_active)
+
+
 # ── Background flush ──────────────────────────────────────────────────────────
 
 async def _flush():
