@@ -442,6 +442,7 @@ async function loadOverview() {
   document.getElementById('s-bots').textContent    = fmt(ov.total_bot_hits || 0);
   document.getElementById('s-open-rate').textContent  = sent ? pct(opens / sent) + ' open rate'   : '';
   document.getElementById('s-click-rate').textContent = sent ? pct(clicks / sent) + ' click rate' : '';
+  document.getElementById('s-threshold').textContent  = ov.ignored_threshold_hours || 48;
 
   document.getElementById('header-stats').textContent =
     `${fmt(sent)} sent · ${fmt(clicks)} clicks`;

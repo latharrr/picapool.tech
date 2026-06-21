@@ -202,6 +202,7 @@ def get_overview() -> dict:
         "total_clicks": clicks,
         "total_bot_hits": bots,
         "total_ignored": ignored,
+        "ignored_threshold_hours": settings.ignored_threshold_hours,
     }
 
 
@@ -336,6 +337,8 @@ async def startup():
     async def _refresh_loop():
         while True:
             await asyncio.sleep(settings.cache_ttl_seconds)
+            # Flush first so reload sees the latest events in Sheets
+            await _flush()
             loop2 = asyncio.get_running_loop()
             await loop2.run_in_executor(None, _reload_links)
             await loop2.run_in_executor(None, _reload_events)

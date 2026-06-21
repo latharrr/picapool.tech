@@ -159,7 +159,7 @@ async def api_create_link(request: Request, body: CreateLinkRequest):
         "expires_at":   body.expires_at.isoformat() if body.expires_at else "",
     }
     await sheets.append_link(link)
-    base = str(request.base_url).rstrip("/")
+    base = settings.base_url.rstrip("/") if settings.base_url else str(request.base_url).rstrip("/")
     return {
         **link,
         "click_url": f"{base}/t/{token}",

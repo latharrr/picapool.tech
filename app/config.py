@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = 30       # how often to refresh in-memory Sheets cache
     ignored_threshold_hours: int = 48
 
+    # Optional: override base URL in generated links (e.g. https://picapool.tech)
+    base_url: str = ""
+
     # Optional AI
     groq_api_key: str = ""
 
