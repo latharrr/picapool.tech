@@ -9,7 +9,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/       ./app/
 COPY static/    ./static/
-COPY migrations/ ./migrations/
 
 # Non-root user for safety
 RUN useradd -m tracker && chown -R tracker /app
