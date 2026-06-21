@@ -210,6 +210,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="overview">Overview</button>
       <button class="tab" data-tab="events">Events</button>
+      <button class="tab" data-tab="campaigns">Campaigns</button>
       <button class="tab" data-tab="summary">Links</button>
       <button class="tab" data-tab="create">Create Link</button>
       <button class="tab" data-tab="ai" style="color:var(--accent2);">⚡ AI Analysis</button>
@@ -280,10 +281,44 @@
       </div>
     </div>
 
+    <!-- ── CAMPAIGNS ── -->
+    <div id="tab-campaigns" class="tab-panel">
+      <div class="filter-bar" style="margin-bottom:20px;">
+        <select id="camp-selector" onchange="loadCampaignDetail()" style="min-width:220px;">
+          <option value="">— select a campaign —</option>
+        </select>
+      </div>
+      <div id="camp-placeholder" class="empty" style="padding:60px 0;">Select a campaign above to see detailed analysis.</div>
+      <div id="camp-detail" style="display:none;">
+        <div class="stats-grid" id="camp-stats-grid">
+          <div class="stat-card"><div class="label">Total Links</div><div class="value" id="cs-links">—</div></div>
+          <div class="stat-card"><div class="label">Opens</div><div class="value" id="cs-opens">—</div><div class="sub" id="cs-open-rate"></div></div>
+          <div class="stat-card"><div class="label">Clicks</div><div class="value" id="cs-clicks">—</div><div class="sub" id="cs-click-rate"></div></div>
+          <div class="stat-card"><div class="label">Responded</div><div class="value" id="cs-responded">—</div><div class="sub">of total links</div></div>
+        </div>
+        <div class="chart-card">
+          <h3 id="camp-chart-title">Events Over Time</h3>
+          <div class="chart-wrap"><canvas id="camp-chart"></canvas></div>
+        </div>
+        <div class="section-title">Recipients</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Recipient</th><th>Token</th><th>Opens</th><th>Clicks</th><th>Status</th><th>Last Activity</th>
+            </tr></thead>
+            <tbody id="camp-recip-body"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ── SUMMARY ── -->
     <div id="tab-summary" class="tab-panel">
       <div class="filter-bar">
-        <input id="sf-search" placeholder="Search token / campaign / recipient…" oninput="renderSummary()" />
+        <select id="sf-campaign" onchange="renderSummary()">
+          <option value="">All campaigns</option>
+        </select>
+        <input id="sf-search" placeholder="Search token / recipient…" oninput="renderSummary()" />
         <select id="sf-status" onchange="renderSummary()">
           <option value="">All status</option>
           <option value="clicked">Clicked</option>
@@ -372,9 +407,11 @@
 
 <script>
 // ════════════════════════════════════════════ State
-let _tsChart = null;
+let _tsChart   = null;
+let _campChart = null;
 let _summaryData = [];
-let _bulkLinks = [];
+let _bulkLinks   = [];
+let _campaigns   = [];
 
 // ════════════════════════════════════════════ Auth
 async function checkAuth() {
@@ -451,14 +488,24 @@ async function loadOverview() {
   renderTsChart(ts);
 
   // Campaigns
+  _campaigns = camps;
+  // Populate campaign dropdowns
+  const campOpts = camps.map(c => `<option value="${esc(c.campaign_id)}">${esc(c.campaign_id)}</option>`).join('');
+  ['camp-selector', 'sf-campaign'].forEach(sid => {
+    const el = document.getElementById(sid);
+    const prev = el.value;
+    el.innerHTML = (sid === 'camp-selector' ? '<option value="">— select a campaign —</option>' : '<option value="">All campaigns</option>') + campOpts;
+    if (prev) el.value = prev;
+  });
+
   const campBody = document.getElementById('camp-body');
   if (!camps.length) { campBody.innerHTML = '<tr><td colspan="5" class="empty">No data yet</td></tr>'; return; }
   const maxClicks = Math.max(...camps.map(c => c.clicks || 0), 1);
   campBody.innerHTML = camps.map(c => {
     const rate = (c.total_links > 0) ? pct((c.clicks || 0) / c.total_links) : '—';
     const w = Math.round(((c.clicks || 0) / maxClicks) * 100);
-    return `<tr>
-      <td><strong>${esc(c.campaign_id)}</strong></td>
+    return `<tr style="cursor:pointer;" onclick="goCampaign('${esc(c.campaign_id)}')">
+      <td><strong style="color:var(--accent2);">${esc(c.campaign_id)}</strong></td>
       <td>${fmt(c.total_links)}</td>
       <td>${fmt(c.opens)}</td>
       <td>${fmt(c.clicks)}</td>
@@ -546,12 +593,14 @@ async function loadSummary() {
 }
 
 function renderSummary() {
-  const search = document.getElementById('sf-search').value.toLowerCase();
-  const status = document.getElementById('sf-status').value;
+  const campaign = document.getElementById('sf-campaign').value;
+  const search   = document.getElementById('sf-search').value.toLowerCase();
+  const status   = document.getElementById('sf-status').value;
   const base = location.origin;
 
   let data = _summaryData.filter(r => {
-    if (search && !JSON.stringify(r).toLowerCase().includes(search)) return false;
+    if (campaign && r.campaign_id !== campaign) return false;
+    if (search && !`${r.token} ${r.recipient_id}`.toLowerCase().includes(search)) return false;
     if (status === 'clicked')  return r.clicks > 0;
     if (status === 'opened')   return r.opens > 0 && r.clicks === 0;
     if (status === 'ignored')  return r.ignored;
@@ -658,8 +707,16 @@ function downloadCSV() {
 const fmt  = n => Number(n).toLocaleString();
 const pct  = r => (r * 100).toFixed(1) + '%';
 const trunc = (s, n) => s && s.length > n ? s.slice(0, n) + '…' : (s || '');
-const fmtTime = iso => iso ? iso.replace('T', ' ').slice(0, 19) : '—';
-const fmtDate = iso => iso ? iso.slice(0, 10) : '—';
+const fmtTime = iso => {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+  catch (_) { return iso; }
+};
+const fmtDate = iso => {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+  catch (_) { return iso.slice(0, 10); }
+};
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -698,6 +755,115 @@ function quick(q) {
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.activeElement.id === 'ai-question') askAI();
 });
+
+// ════════════════════════════════════════════ Campaign detail
+
+function goCampaign(cid) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="campaigns"]').classList.add('active');
+  document.getElementById('tab-campaigns').classList.add('active');
+  document.getElementById('camp-selector').value = cid;
+  loadCampaignDetail();
+}
+
+async function loadCampaignDetail() {
+  const cid         = document.getElementById('camp-selector').value;
+  const placeholder = document.getElementById('camp-placeholder');
+  const detail      = document.getElementById('camp-detail');
+  if (!cid) { placeholder.style.display = 'block'; detail.style.display = 'none'; return; }
+  placeholder.style.display = 'none';
+  detail.style.display = 'block';
+  document.getElementById('camp-chart-title').textContent = `${cid} — Events Over Time`;
+  document.getElementById('camp-recip-body').innerHTML = '<tr><td colspan="6" class="empty">Loading…</td></tr>';
+
+  const events = await fetch(`/api/events?campaign_id=${encodeURIComponent(cid)}&limit=2000`).then(r => r.json());
+  const real   = events.filter(e => String(e.is_preview_bot).toLowerCase() !== 'true');
+
+  // Per-token rollup
+  const byToken = {};
+  real.forEach(e => {
+    const tk = e.token;
+    if (!byToken[tk]) byToken[tk] = { opens: 0, clicks: 0, recipient: e.recipient_id || '', lastEvent: '' };
+    if (e.event_type === 'open')  byToken[tk].opens++;
+    if (e.event_type === 'click') byToken[tk].clicks++;
+    if (e.timestamp > byToken[tk].lastEvent) byToken[tk].lastEvent = e.timestamp;
+  });
+
+  const campSummary = _summaryData.filter(r => r.campaign_id === cid);
+  const totalLinks  = campSummary.length || Object.keys(byToken).length;
+  const totalOpens  = real.filter(e => e.event_type === 'open').length;
+  const totalClicks = real.filter(e => e.event_type === 'click').length;
+  const responded   = Object.values(byToken).filter(v => v.opens > 0 || v.clicks > 0).length;
+
+  document.getElementById('cs-links').textContent      = fmt(totalLinks);
+  document.getElementById('cs-opens').textContent      = fmt(totalOpens);
+  document.getElementById('cs-clicks').textContent     = fmt(totalClicks);
+  document.getElementById('cs-responded').textContent  = fmt(responded);
+  document.getElementById('cs-open-rate').textContent  = totalLinks ? pct(totalOpens  / totalLinks) + ' open rate'  : '';
+  document.getElementById('cs-click-rate').textContent = totalLinks ? pct(totalClicks / totalLinks) + ' click rate' : '';
+
+  // Hourly timeseries
+  const hourMap = {};
+  real.forEach(e => {
+    const d = new Date(e.timestamp); d.setMinutes(0, 0, 0, 0);
+    const k = d.toISOString();
+    if (!hourMap[k]) hourMap[k] = { open: 0, click: 0 };
+    if (e.event_type === 'open')  hourMap[k].open++;
+    if (e.event_type === 'click') hourMap[k].click++;
+  });
+  const hkeys  = Object.keys(hourMap).sort();
+  const tsData = {
+    labels: hkeys.map(k => new Date(k).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })),
+    datasets: [
+      { label: 'Opens',  data: hkeys.map(k => hourMap[k].open),  borderColor: '#22d3ee', backgroundColor: '#22d3ee22', tension: .3, fill: true },
+      { label: 'Clicks', data: hkeys.map(k => hourMap[k].click), borderColor: '#6366f1', backgroundColor: '#6366f122', tension: .3, fill: true },
+    ],
+  };
+  if (_campChart) { _campChart.data = tsData; _campChart.update(); }
+  else {
+    _campChart = new Chart(document.getElementById('camp-chart'), {
+      type: 'line', data: tsData,
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#94a3b8' } } },
+        scales: {
+          x: { ticks: { color: '#94a3b8', maxTicksLimit: 12 }, grid: { color: '#2a2d3a' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: '#2a2d3a' }, beginAtZero: true },
+        },
+      },
+    });
+  }
+
+  // Recipients table — merge events with summary (to show pending/ignored rows too)
+  const summaryMap = Object.fromEntries(campSummary.map(r => [r.token, r]));
+  const allTks     = [...new Set([...Object.keys(byToken), ...campSummary.map(r => r.token)])];
+  const rows       = allTks.map(tk => {
+    const ev = byToken[tk]    || { opens: 0, clicks: 0, recipient: '', lastEvent: '' };
+    const sm = summaryMap[tk] || {};
+    return { token: tk, opens: ev.opens, clicks: ev.clicks,
+             recipient: ev.recipient || sm.recipient_id || '—',
+             lastEvent: ev.lastEvent, ignored: sm.ignored || false };
+  }).sort((a, b) => b.clicks - a.clicks || b.opens - a.opens);
+
+  document.getElementById('camp-recip-body').innerHTML = rows.length
+    ? rows.map(r => {
+        let badge;
+        if (r.clicks > 0)     badge = `<span class="badge badge-click">clicked</span>`;
+        else if (r.opens > 0) badge = `<span class="badge badge-open">opened</span>`;
+        else if (r.ignored)   badge = `<span class="badge badge-ignored">ignored</span>`;
+        else                  badge = `<span class="badge" style="background:#ffffff11;color:var(--muted)">pending</span>`;
+        return `<tr>
+          <td>${esc(r.recipient)}</td>
+          <td><code>${esc(r.token)}</code></td>
+          <td>${fmt(r.opens)}</td>
+          <td>${fmt(r.clicks)}</td>
+          <td>${badge}</td>
+          <td style="color:var(--muted);">${fmtTime(r.lastEvent)}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" class="empty">No recipients found</td></tr>';
+}
 
 // ════════════════════════════════════════════ Boot
 checkAuth();
